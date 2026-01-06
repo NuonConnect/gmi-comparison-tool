@@ -62,11 +62,27 @@ const PROVIDER_OPTIONS = [
   'DNI - Al Madallah'
 ];
 
-// Custom Companies Storage Key
+// Custom Companies Storage Key (fallback for localStorage)
 const CUSTOM_COMPANIES_STORAGE_KEY = 'gmi_custom_companies';
+const COMPARISONS_STORAGE_KEY = 'insuranceHistory';
 
-// Load custom companies from localStorage
-const loadCustomCompanies = () => {
+// API endpoints for cloud storage
+const API_BASE = '/api';
+
+// Load custom companies from cloud (with localStorage fallback)
+const loadCustomCompanies = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/custom-companies`);
+    if (response.ok) {
+      const data = await response.json();
+      // Also update localStorage as backup
+      localStorage.setItem(CUSTOM_COMPANIES_STORAGE_KEY, JSON.stringify(data));
+      return data;
+    }
+  } catch (error) {
+    console.log('Cloud fetch failed, using localStorage:', error);
+  }
+  // Fallback to localStorage
   try {
     const stored = localStorage.getItem(CUSTOM_COMPANIES_STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -76,12 +92,73 @@ const loadCustomCompanies = () => {
   }
 };
 
-// Save custom companies to localStorage
-const saveCustomCompanies = (companies) => {
+// Sync version for initial render
+const loadCustomCompaniesSync = () => {
+  try {
+    const stored = localStorage.getItem(CUSTOM_COMPANIES_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+// Save custom companies to cloud (with localStorage backup)
+const saveCustomCompanies = async (companies) => {
+  // Always save to localStorage first (instant)
   try {
     localStorage.setItem(CUSTOM_COMPANIES_STORAGE_KEY, JSON.stringify(companies));
   } catch (error) {
-    console.error('Error saving custom companies:', error);
+    console.error('Error saving to localStorage:', error);
+  }
+  
+  // Then save to cloud
+  try {
+    await fetch(`${API_BASE}/custom-companies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(companies)
+    });
+  } catch (error) {
+    console.error('Error saving to cloud:', error);
+  }
+};
+
+// Load comparisons from cloud (with localStorage fallback)
+const loadComparisons = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/comparisons`);
+    if (response.ok) {
+      const data = await response.json();
+      localStorage.setItem(COMPARISONS_STORAGE_KEY, JSON.stringify(data));
+      return data;
+    }
+  } catch (error) {
+    console.log('Cloud fetch failed, using localStorage:', error);
+  }
+  try {
+    const stored = localStorage.getItem(COMPARISONS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+// Save comparisons to cloud (with localStorage backup)
+const saveComparisons = async (comparisons) => {
+  try {
+    localStorage.setItem(COMPARISONS_STORAGE_KEY, JSON.stringify(comparisons));
+  } catch (error) {
+    console.error('Error saving to localStorage:', error);
+  }
+  
+  try {
+    await fetch(`${API_BASE}/comparisons`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(comparisons)
+    });
+  } catch (error) {
+    console.error('Error saving to cloud:', error);
   }
 };
 
@@ -2639,10 +2716,17 @@ const CustomCompanyManager = ({ isOpen, onClose, onCompanyAdded }) => {
   const [templateFields, setTemplateFields] = useState({ ...CUSTOM_COMPANY_DEFAULT_TEMPLATE });
   const [existingCompanies, setExistingCompanies] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setExistingCompanies(loadCustomCompanies());
+      const fetchCompanies = async () => {
+        setIsLoading(true);
+        const companies = await loadCustomCompanies();
+        setExistingCompanies(companies);
+        setIsLoading(false);
+      };
+      fetchCompanies();
     }
   }, [isOpen]);
 
@@ -2650,7 +2734,7 @@ const CustomCompanyManager = ({ isOpen, onClose, onCompanyAdded }) => {
     setTemplateFields(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleSaveCompany = () => {
+  const handleSaveCompany = async () => {
     if (!companyName.trim()) {
       alert('Please enter a company name');
       return;
@@ -2665,7 +2749,7 @@ const CustomCompanyManager = ({ isOpen, onClose, onCompanyAdded }) => {
     };
 
     const updatedCompanies = [...existingCompanies, newCompany];
-    saveCustomCompanies(updatedCompanies);
+    await saveCustomCompanies(updatedCompanies);
     setExistingCompanies(updatedCompanies);
     
     // Reset form
@@ -2680,9 +2764,9 @@ const CustomCompanyManager = ({ isOpen, onClose, onCompanyAdded }) => {
     alert(`✅ Company "${newCompany.name}" added successfully! It will now appear in the provider list.`);
   };
 
-  const handleDeleteCompany = (companyId) => {
+  const handleDeleteCompany = async (companyId) => {
     const updatedCompanies = existingCompanies.filter(c => c.id !== companyId);
-    saveCustomCompanies(updatedCompanies);
+    await saveCustomCompanies(updatedCompanies);
     setExistingCompanies(updatedCompanies);
     setShowDeleteConfirm(null);
     alert('✅ Company deleted successfully!');
@@ -2751,7 +2835,7 @@ const CustomCompanyManager = ({ isOpen, onClose, onCompanyAdded }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Insurance Company*</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Company Name *</label>
               <input
                 type="text"
                 value={companyName}
@@ -2835,16 +2919,21 @@ const DHAEnhancedSelector = ({ onTemplateSelect, onClose }) => {
   const [editedTemplate, setEditedTemplate] = useState(null);
   const [manualEntryMode, setManualEntryMode] = useState(false);
   const [showCustomCompanyManager, setShowCustomCompanyManager] = useState(false);
-  const [customCompanies, setCustomCompanies] = useState([]);
+  const [customCompanies, setCustomCompanies] = useState(loadCustomCompaniesSync());
 
   // Load custom companies on mount
   useEffect(() => {
-    setCustomCompanies(loadCustomCompanies());
+    const fetchCompanies = async () => {
+      const companies = await loadCustomCompanies();
+      setCustomCompanies(companies);
+    };
+    fetchCompanies();
   }, []);
 
   // Refresh custom companies when manager closes
-  const handleCustomCompanyAdded = (newCompany) => {
-    setCustomCompanies(loadCustomCompanies());
+  const handleCustomCompanyAdded = async (newCompany) => {
+    const companies = await loadCustomCompanies();
+    setCustomCompanies(companies);
   };
 
   // Define the available DHA Enhanced providers
@@ -3993,7 +4082,7 @@ if (isCustom) {
     }
   };
 
-  const saveAndDownload = () => {
+  const saveAndDownload = async () => {
     if (!companyInfo.companyName) {
       alert('Please enter company name');
       return;
@@ -4024,26 +4113,26 @@ if (isCustom) {
       customFields
     };
     
-    const historyData = JSON.parse(localStorage.getItem('insuranceHistory') || '[]');
-    
+    let updatedHistory;
     if (isEditingComparison) {
       // Update existing comparison
-      const updatedHistory = historyData.map(item => 
+      updatedHistory = history.map(item => 
         item.id === currentComparisonId ? comparison : item
       );
-      localStorage.setItem('insuranceHistory', JSON.stringify(updatedHistory));
       alert('✅ Comparison updated successfully!');
     } else {
       // Add new comparison
-      historyData.unshift(comparison);
-      localStorage.setItem('insuranceHistory', JSON.stringify(historyData));
+      updatedHistory = [comparison, ...history];
       alert('✅ Comparison saved successfully!');
     }
+    
+    // Save to cloud
+    await saveComparisons(updatedHistory);
+    setHistory(updatedHistory);
     
     // Reset editing state
     setIsEditingComparison(false);
     setCurrentComparisonId(null);
-    loadHistory(); // Reload history
   };
 
   const handleHighlightPlan = (planId) => {
@@ -4260,18 +4349,17 @@ const handleBackToNormal = () => {
     });
   };
 
-  // Load history
-  const loadHistory = () => {
-    const savedHistory = JSON.parse(localStorage.getItem('insuranceHistory') || '[]');
+  // Load history from cloud
+  const loadHistory = async () => {
+    const savedHistory = await loadComparisons();
     setHistory(savedHistory);
   };
 
-  // Delete comparison
-  const deleteComparison = (id) => {
+  // Delete comparison from cloud
+  const deleteComparison = async (id) => {
     const updatedHistory = history.filter(item => item.id !== id);
     setHistory(updatedHistory);
-    localStorage.setItem('insuranceHistory', JSON.stringify(updatedHistory));
-    loadHistory(); // Reload history
+    await saveComparisons(updatedHistory);
   };
 
   // Preview comparison without first page
