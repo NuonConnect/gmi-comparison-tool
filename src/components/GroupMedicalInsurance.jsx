@@ -162,25 +162,38 @@ const saveComparisons = async (comparisons) => {
   }
 };
 
-// Default template fields for custom companies
+// Default template fields for custom companies - SME STYLE FIELDS
+// Default template fields for custom companies - SME STYLE FIELDS
 const CUSTOM_COMPANY_DEFAULT_TEMPLATE = {
-  planName: 'Custom Plan',
-  annualLimit: 'AED 150,000',
-  geographicalScope: 'UAE',
-  network: 'Network Name',
-  accessForOP: 'Clinics & Medical Centers',
-  referralProcedure: 'GP referral to SP',
-  ipCoinsurance: 'Covered with 20% Co-Pay',
-  deductibleConsultation: 'Covered with 20% Co-Pay',
-  opCoinsurance: 'Covered with 20% Co-Pay',
-  pharmacyLimit: 'Covered up to AED 2,500',
-  pharmacyCoinsurance: 'Covered with 30% Co-Pay',
-  physiotherapySessions: '6 Sessions',
-  maternity: 'As per Standard DHA',
-  dentalDiscounts: 'Yes',
-  opticalDiscount: 'Yes'
+  // Company Coverage Details
+  network: '',
+  aggregateLimit: 'AED 150,000',
+  areaOfCover: 'UAE',
+  preExistingCondition: '',
+  
+  // Inpatient Benefits
+  roomType: 'PRIVATE',
+  inpatientCopay: '',
+  diagnosticTests: '',
+  drugsMedicines: '',
+  consultantFees: '',
+  
+  // Outpatient Benefits
+  outpatientConsultation: '',
+  outpatientCopay: 'Covered',
+  diagnosticLabs: 'Covered',
+  pharmacyLimit: '',
+  pharmacyCopay: 'Covered',
+  prescribedPhysiotherapy: '',
+  
+  // Other Benefits
+  maternity: '',
+  routineDental: '',
+  routineOptical: '',
+  preventiveServices: 'Covered as per DHA',
+  alternativeMedicines: '',
+  repatriation: 'Covered'
 };
-
 // SME Constants
 const AREA_OF_COVER_OPTIONS = ['UAE', 'GCC', 'ISC', 'Arab countries', 'South East Asia', 'Indian Sub Continent','Worldwide','Worldwide(Excluding USA & CANADA)', 'Other','UAE only',
   'UAE, ISC and SEA at R&C of UAE',
@@ -229,7 +242,7 @@ const BASIC_TPA_NETWORK_MAPPING = {
   'HEALTHNET': [ 'Basic Network']
 };
 
-const ROOM_TYPE_OPTIONS = ['PRIVATE', 'SEMI PRIVATE', 'SHARED ROOM','WARD', 'Other'];
+const ROOM_TYPE_OPTIONS = ['PRIVATE', 'SEMI PRIVATE', 'SHARED ROOM', 'WARD', 'Suit room'];
 const COVERAGE_OPTIONS = [
   'Covered', 
   'Covered with 10% copay', 
@@ -1972,15 +1985,35 @@ const generateReferenceNumber = () => {
 };
 
 function downloadHTMLFile(htmlContent, fileName) {
-  const blob = new Blob([htmlContent], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Use iframe approach - same as Individual comparison
+  // Opens print dialog where user can "Save as PDF"
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
+  
+  const iframeDoc = iframe.contentWindow?.document || iframe.contentDocument;
+  if (iframeDoc) {
+    iframeDoc.open();
+    iframeDoc.write(htmlContent);
+    iframeDoc.close();
+    
+    // Wait for content and images to load then print
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      // Remove iframe after printing dialog closes
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1000);
+    }, 800);
+  }
 }
 
 const formatCategoryData = (categoriesData) => {
@@ -2089,14 +2122,23 @@ function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber
     <meta charset="UTF-8">
     <title>NSIB Group Medical Insurance Comparison</title>
     <style>
-       * { margin: 0; padding: 0; box-sizing: border-box; }
+<style>
+   * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
 @page { size: A4 landscape; margin: 0; }
 @media print {
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    html, body { width: 297mm; height: 210mm; }
     .page1 { page-break-after: always !important; page-break-inside: avoid !important; }
     .page2 { page-break-before: always !important; page-break-after: always !important; }
     .page3 { page-break-before: always !important; page-break-inside: avoid !important; }
+}
+html, body {
+    width: 297mm;
+    height: 210mm;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
 }
 .page1 { width: 297mm; height: 210mm; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; page-break-after: always; }
 .page1 img { width: 100%; height: auto; max-height: 100%; object-fit: contain; }
@@ -2209,14 +2251,14 @@ tr:not(.section-header) td:first-child {
             <thead>
                 <tr>
                     <th style="width: 200px; min-width: 200px;">BENEFITS</th>
-                    ${plans.map(plan => `
-                        <th class="plan-header">
-                            ${plan.providerName.substring(0, 30)}
-                            ${plan.isRenewal ? '<div class="tag tag-renewal">RENEWAL</div>' : ''}
-                            ${plan.isRecommended ? '<div class="tag tag-recommended">RECOMMENDED</div>' : ''}
-                            ${plan.id === highlightedPlanId ? '<div class="tag tag-highlighted">HIGHLIGHTED</div>' : ''}
-                        </th>
-                    `).join('')}
+                 ${plans.map(plan => `
+    <th class="plan-header">
+        ${plan.providerName.substring(0, 30)}${plan.planTag ? ' - ' + plan.planTag : ''}
+        ${plan.isRenewal ? '<div class="tag tag-renewal">RENEWAL</div>' : ''}
+        ${plan.isRecommended ? '<div class="tag tag-recommended">RECOMMENDED</div>' : ''}
+        ${plan.id === highlightedPlanId ? '<div class="tag tag-highlighted">HIGHLIGHTED</div>' : ''}
+    </th>
+`).join('')}
                 </tr>
             </thead>
             <tbody>
@@ -2250,15 +2292,21 @@ tr:not(.section-header) td:first-child {
                     }).join('')}
                 </tr>
                 <tr>
-                    <td class="benefit-name">Aggregate Limit</td>
-                    ${plans.map(plan => {
-                      const limitData = plan.categoriesData?.aggregateLimit || plan.categoriesData?.annualLimit || {};
-                      const displayText = formatCategoryData(limitData);
-                      return `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${displayText}</td>`;
-                    }).join('')}
-                </tr>
+    <td class="benefit-name">Aggregate Limit</td>
+    ${plans.map(plan => {
+      const limitData = plan.categoriesData?.aggregateLimit || plan.categoriesData?.annualLimit || {};
+      const displayText = formatCategoryData(limitData);
+      return `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${displayText}</td>`;
+    }).join('')}
+</tr>
+${hasSMEPlan && plans.some(plan => plan.categoriesData?.preExistingCondition) ? `
+<tr>
+    <td class="benefit-name">Pre Existing Condition</td>
+    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'preExistingCondition')}</td>`).join('')}
+</tr>
+` : ''}
 
-                <!-- DHA ENHANCED TEMPLATE FIELDS - Show only if DHA plans exist -->
+<!-- DHA ENHANCED TEMPLATE FIELDS - Show only if DHA plans exist -->
 <!-- DHA ENHANCED TEMPLATE FIELDS - Show only if DHA plans exist -->
 ${hasEnhancedPlan ? `
 <tr class="section-header">
@@ -2387,6 +2435,14 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'preventiveServices')}</td>`).join('')}
                 </tr>
                 ` : ''}
+
+${plans.some(plan => plan.categoriesData?.alternativeMedicines) ? `
+<tr>
+    <td class="benefit-name">Alternative Medicines</td>
+    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'alternativeMedicines')}</td>`).join('')}
+</tr>
+` : ''}
+
                 ${plans.some(plan => plan.categoriesData?.repatriation) ? `
                 <tr>
                     <td class="benefit-name">Repatriation</td>
@@ -2868,7 +2924,7 @@ const CustomCompanyManager = ({ isOpen, onClose, onCompanyAdded }) => {
                 .replace('Op', 'OP')
                 .trim();
               
-              const isLongField = ['geographicalScope', 'accessForOP'].includes(key);
+              const isLongField = ['areaOfCover', 'preExistingCondition', 'inpatientCopay', 'consultantFees', 'outpatientConsultation', 'prescribedPhysiotherapy', 'maternity'].includes(key);
               
               return (
                 <div key={key} className={isLongField ? 'md:col-span-2' : ''}>
@@ -3161,14 +3217,8 @@ const handleProviderChange = (provider) => {
         <div className="space-y-4">
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-bold text-gray-700">Select Provider</label>
-              <button
-                onClick={() => setShowCustomCompanyManager(true)}
-                className="bg-purple-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-purple-700 transition flex items-center gap-1"
-              >
-                ➕ Add Custom Company
-              </button>
-            </div>
+  <label className="block text-sm font-bold text-gray-700">Select Provider</label>
+</div>
             <select
               value={selectedProvider}
               onChange={(e) => handleProviderChange(e.target.value)}
@@ -3222,14 +3272,35 @@ const handleProviderChange = (provider) => {
                   if (key.includes('Premium') || key.includes('premium')) return null;
                   if (key === 'dental' || key === 'psychiatry' || key === 'groupSize') return null;
                   
-                  const label = key
-                    .replace(/([A-Z])/g, ' $1')
-                    .replace(/^./, str => str.toUpperCase())
-                    .replace('Ip', 'IP')
-                    .replace('Op', 'OP')
-                    .replace('T P A', 'TPA')
-                    .trim();
-                    
+                 // Custom labels for SME fields
+const fieldLabels = {
+  network: 'Network',
+  aggregateLimit: 'Aggregate Limit',
+  areaOfCover: 'Area of Cover',
+  preExistingCondition: 'Pre Existing Condition',
+  roomType: 'Room Type',
+  inpatientCopay: 'Inpatient Copay',
+  diagnosticTests: 'Diagnostic Tests & Procedures',
+  drugsMedicines: 'Drugs and Medicines',
+  consultantFees: "Consultant's, Surgeon's and Anesthetist's Fees",
+  outpatientConsultation: 'Outpatient Consultation',
+  outpatientCopay: 'Outpatient Copay',
+  diagnosticLabs: 'Diagnostic Tests and Labs',
+  pharmacyLimit: 'Pharmacy Limit',
+  pharmacyCopay: 'Pharmacy Copay',
+  prescribedPhysiotherapy: 'Prescribed Physiotherapy',
+  maternity: 'Maternity',
+  routineDental: 'Dental Benefits',
+  routineOptical: 'Optical Benefits',
+  preventiveServices: 'Preventive Services',
+  alternativeMedicines: 'Alternative Medicines',
+  repatriation: 'Repatriation'
+};
+
+const label = fieldLabels[key] || key
+  .replace(/([A-Z])/g, ' $1')
+  .replace(/^./, str => str.toUpperCase())
+  .trim();
                   return (
                     <div key={key} className="space-y-1">
                       <div className="flex justify-between items-center">
@@ -3535,30 +3606,32 @@ function PlanGenerator() {
   const [planType, setPlanType] = useState('SME');
   const [plans, setPlans] = useState([]);
   const [showDHAEnhancedSelector, setShowDHAEnhancedSelector] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState({
-    id: null,
-    planType: 'SME',
-    providerName: '',
-    selectedCategories: [],
-    categoriesData: {},
-    catAMembers: 0,
-    catAPremium: 0,
-    catBMembers: 0,
-    catBPremium: 0,
-    catCMembers: 0,
-    catCPremium: 0,
-    catDMembers: 0,
-    catDPremium: 0,
-    dubaiMembers: 0,
-    northernEmiratesMembers: 0,
-    policyFee: 0,
-    isRecommended: false,
-    isRenewal: false,
-    annualLimit: '',
-    areaOfCoverMode: 'dropdown',
-    areaOfCoverDropdown: '',
-    areaOfCoverTextarea: ''
-  });
+const [showCustomCompanyManager, setShowCustomCompanyManager] = useState(false);
+const [currentPlan, setCurrentPlan] = useState({
+  id: null,
+  planType: 'SME',
+  providerName: '',
+  selectedCategories: [],
+  categoriesData: {},
+  catAMembers: 0,
+  catAPremium: 0,
+  catBMembers: 0,
+  catBPremium: 0,
+  catCMembers: 0,
+  catCPremium: 0,
+  catDMembers: 0,
+  catDPremium: 0,
+  dubaiMembers: 0,
+  northernEmiratesMembers: 0,
+  policyFee: 0,
+  isRecommended: false,
+  isRenewal: false,
+  planTag: '',
+  annualLimit: '',
+  areaOfCoverMode: 'dropdown',
+  areaOfCoverDropdown: '',
+  areaOfCoverTextarea: ''
+});
 
   const [companyInfo, setCompanyInfo] = useState({
     companyName: 'Demo Corporation LLC',
@@ -4387,29 +4460,31 @@ const handleBackToNormal = () => {
   };
 
   const getSMEBenefits = () => {
-    const companyInfoBenefits = [
-      { field: 'network', label: 'Network', options: networkOptions, showMainValue: true, hasTextArea: false, canHighlight: false },
-      { field: 'aggregateLimit', label: 'Aggregate Limit', options: AGGREGATE_LIMIT_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: false }
-    ];
+  // UPDATED: Added Pre Existing Condition field
+  const companyInfoBenefits = [
+    { field: 'network', label: 'Network', options: networkOptions, showMainValue: true, hasTextArea: false, canHighlight: false },
+    { field: 'aggregateLimit', label: 'Aggregate Limit', options: AGGREGATE_LIMIT_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: false },
+    { field: 'preExistingCondition', label: 'Pre Existing Condition', options: [], showMainValue: false, hasTextArea: true, canHighlight: true }
+  ];
 
-    const inpatientBenefits = [
-      { field: 'roomType', label: 'Room Type', options: ROOM_TYPE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
-        { field: 'inpatientCopay', label: 'Inpatient Copay', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-      { field: 'diagnosticTests', label: 'Diagnostic Tests & Procedures', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
-      { field: 'drugsMedicines', label: 'Drugs and Medicines', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
-      { field: 'consultantFees', label: "Consultant's, Surgeon's and Anesthetist's Fees", options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
-      
-    ];
+  // UPDATED: Room Type = dropdown ONLY (no textarea), others = textarea ONLY (no dropdown)
+  const inpatientBenefits = [
+    { field: 'roomType', label: 'Room Type', options: ROOM_TYPE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+    { field: 'inpatientCopay', label: 'Inpatient Copay', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'diagnosticTests', label: 'Diagnostic Tests & Procedures', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'drugsMedicines', label: 'Drugs and Medicines', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'consultantFees', label: "Consultant's, Surgeon's and Anesthetist's Fees", options: [], showMainValue: false, hasTextArea: true, canHighlight: true }
+  ];
 
-    const outpatientBenefits = [
-         { field: 'outpatientConsultation', label: 'Outpatient Consultation', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-      { field: 'outpatientCopay', label: 'Outpatient Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
-      { field: 'diagnosticLabs', label: 'Diagnostic Tests and Labs', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
-      { field: 'pharmacyLimit', label: 'Pharmacy Limit', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-      { field: 'pharmacyCopay', label: 'Pharmacy Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
-      { field: 'prescribedPhysiotherapy', label: 'Prescribed Physiotherapy', options: PRESCRIBED_PHYSIOTHERAPY_NETWORK_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
-   
-    ];
+  // UPDATED: Outpatient Copay, Diagnostic Tests and Labs, Pharmacy Copay = dropdown ONLY (no textarea)
+  const outpatientBenefits = [
+    { field: 'outpatientConsultation', label: 'Outpatient Consultation', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'outpatientCopay', label: 'Outpatient Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+    { field: 'diagnosticLabs', label: 'Diagnostic Tests and Labs', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+    { field: 'pharmacyLimit', label: 'Pharmacy Limit', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'pharmacyCopay', label: 'Pharmacy Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+    { field: 'prescribedPhysiotherapy', label: 'Prescribed Physiotherapy', options: PRESCRIBED_PHYSIOTHERAPY_NETWORK_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true }
+  ];
 
     const otherBenefits = [
       { field: 'maternity', label: 'Maternity', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
@@ -4417,7 +4492,7 @@ const handleBackToNormal = () => {
       { field: 'routineOptical', label: 'Optical Benefits', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'preventiveServices', label: 'Preventive Services', options: PREVENTIVE_SERVICES_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
       { field: 'alternativeMedicines', label: 'Alternative Medicines', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-      { field: 'repatriation', label: 'Repatriation', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+     { field: 'repatriation', label: 'Repatriation', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
    
     ];
 
@@ -4670,43 +4745,52 @@ const showEditableEnhancedBasicFields = () => {
     {/* LEFT COLUMN - FORM */}
     <div className="bg-white rounded-xl p-5 shadow-2xl">
       <div className="mb-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200">
-        <h3 className="font-bold text-indigo-800 mb-3 text-sm">📑 PLAN TYPE SELECTION</h3>
-        
-        <div className="flex flex-wrap gap-3 mb-4">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="radio"
-              name="planType"
-              checked={planType === 'BASIC'}
-              onChange={() => handlePlanTypeChange('BASIC')}
-              className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
-            />
-            <span className="text-sm font-bold text-indigo-700">BASIC</span>
-          </label>
-          
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="radio"
-              name="planType"
-              checked={planType === 'ENHANCED_BASIC'}
-              onChange={() => handlePlanTypeChange('ENHANCED_BASIC')}
-              className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
-            />
-            <span className="text-sm font-bold text-indigo-700">ENHANCED BASIC (DHA Enhanced)</span>
-          </label>
-          
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="radio"
-              name="planType"
-              checked={planType === 'SME'}
-              onChange={() => handlePlanTypeChange('SME')}
-              className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
-            />
-            <span className="text-sm font-bold text-indigo-700">SME</span>
-          </label>
-        </div>
-      </div>
+  <h3 className="font-bold text-indigo-800 mb-3 text-sm">📑 PLAN TYPE SELECTION</h3>
+  
+  <div className="flex flex-wrap gap-3 mb-4">
+    <label className="flex items-center space-x-2 cursor-pointer">
+      <input
+        type="radio"
+        name="planType"
+        checked={planType === 'BASIC'}
+        onChange={() => handlePlanTypeChange('BASIC')}
+        className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+      />
+      <span className="text-sm font-bold text-indigo-700">BASIC</span>
+    </label>
+    
+    <label className="flex items-center space-x-2 cursor-pointer">
+      <input
+        type="radio"
+        name="planType"
+        checked={planType === 'ENHANCED_BASIC'}
+        onChange={() => handlePlanTypeChange('ENHANCED_BASIC')}
+        className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+      />
+      <span className="text-sm font-bold text-indigo-700">ENHANCED BASIC (DHA Enhanced)</span>
+    </label>
+    
+    <label className="flex items-center space-x-2 cursor-pointer">
+      <input
+        type="radio"
+        name="planType"
+        checked={planType === 'SME'}
+        onChange={() => handlePlanTypeChange('SME')}
+        className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+      />
+      <span className="text-sm font-bold text-indigo-700">SME</span>
+    </label>
+  </div>
+  
+  {/* ADD CUSTOM COMPANY BUTTON - MOVED HERE */}
+  <button
+    onClick={() => setShowCustomCompanyManager(true)}
+    className="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-purple-700 transition flex items-center gap-1"
+  >
+    ➕ Add Custom Company
+  </button>
+</div>
+      
 
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-indigo-700">
@@ -5003,28 +5087,46 @@ const showEditableEnhancedBasicFields = () => {
                 </>
               )}
 
-              {/* Recommended and Renewal checkboxes - Available for both SME and BASIC */}
-              <div className="flex gap-3 mt-3">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={currentPlan.isRecommended}
-                    onChange={(e) => handleInputChange('isRecommended', e.target.checked)}
-                    className="w-4 h-4 text-green-600 focus:ring-2 focus:ring-green-500"
-                  />
-                  <span className="text-xs font-bold text-green-700">⭐ Recommended</span>
-                </label>
+             {/* Plan Tag textarea for SME - replaces Recommended/Renewal checkboxes */}
+{planType === 'SME' && (
+  <div className="mt-3">
+    <label className="block text-xs font-bold text-gray-700 mb-1">
+      Plan Tag (e.g., Renewal, New Business) - Will display as: Provider Name - Tag
+    </label>
+    <input
+      type="text"
+      value={currentPlan.planTag || ''}
+      onChange={(e) => handleInputChange('planTag', e.target.value)}
+      className="w-full p-2 border-2 border-purple-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500"
+      placeholder="e.g., Renewal, New Business, etc."
+    />
+  </div>
+)}
 
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={currentPlan.isRenewal}
-                    onChange={(e) => handleInputChange('isRenewal', e.target.checked)}
-                    className="w-4 h-4 text-yellow-600 focus:ring-2 focus:ring-yellow-500"
-                  />
-                  <span className="text-xs font-bold text-yellow-700">🔄 Renewal</span>
-                </label>
-              </div>
+{/* Keep Recommended/Renewal checkboxes for BASIC plans only */}
+{planType === 'BASIC' && (
+  <div className="flex gap-3 mt-3">
+    <label className="flex items-center space-x-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={currentPlan.isRecommended}
+        onChange={(e) => handleInputChange('isRecommended', e.target.checked)}
+        className="w-4 h-4 text-green-600 focus:ring-2 focus:ring-green-500"
+      />
+      <span className="text-xs font-bold text-green-700">⭐ Recommended</span>
+    </label>
+
+    <label className="flex items-center space-x-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={currentPlan.isRenewal}
+        onChange={(e) => handleInputChange('isRenewal', e.target.checked)}
+        className="w-4 h-4 text-yellow-600 focus:ring-2 focus:ring-yellow-500"
+      />
+      <span className="text-xs font-bold text-yellow-700">🔄 Renewal</span>
+    </label>
+  </div>
+)}
               </div>
             </div>
           )}
@@ -5407,12 +5509,12 @@ const showEditableEnhancedBasicFields = () => {
           >
             👁️ Preview
           </button>
-          <button
-            onClick={saveAndDownload}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition text-sm"
-          >
-            💾 Save & Download
-          </button>
+     <button
+  onClick={saveAndDownload}
+  className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition text-sm"
+>
+  🖨️ Print / Save PDF
+</button>
         </div>
       </div>
 
@@ -5438,7 +5540,10 @@ const showEditableEnhancedBasicFields = () => {
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-bold text-gray-800">{plan.providerName}</h3>
+                    <h3 className="font-bold text-gray-800">
+  {plan.providerName}
+  {plan.planTag && <span className="text-purple-600"> - {plan.planTag}</span>}
+</h3>
                     {plan.isRecommended && (
                       <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold">⭐ Recommended</span>
                     )}
@@ -5509,14 +5614,21 @@ const showEditableEnhancedBasicFields = () => {
       onBackToNormal={handleBackToNormal}
     />
 
-    {/* DHA ENHANCED SELECTOR MODAL */}
-    {showDHAEnhancedSelector && (
-      <DHAEnhancedSelector
-        onTemplateSelect={handleTemplateSelect}
-        onClose={() => setShowDHAEnhancedSelector(false)}
-      />
-    )}
-  </div>
+   {/* DHA ENHANCED SELECTOR MODAL */}
+{showDHAEnhancedSelector && (
+  <DHAEnhancedSelector
+    onTemplateSelect={handleTemplateSelect}
+    onClose={() => setShowDHAEnhancedSelector(false)}
+  />
+)}
+
+{/* CUSTOM COMPANY MANAGER MODAL */}
+<CustomCompanyManager
+  isOpen={showCustomCompanyManager}
+  onClose={() => setShowCustomCompanyManager(false)}
+  onCompanyAdded={() => {}}
+/>
+</div>
 );
 }
 export default PlanGenerator;
