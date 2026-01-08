@@ -2063,8 +2063,8 @@ function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber
     return highlightedItems[planId] && highlightedItems[planId][benefitKey];
   };
 
-  // Smart field detection
-  const hasSMEPlan = plans.some(plan => plan.planType === 'SME');
+  // Smart field detection - ENHANCED_CUSTOM is treated like SME for display
+  const hasSMEPlan = plans.some(plan => plan.planType === 'SME' || plan.planType === 'ENHANCED_CUSTOM');
   const hasBasicPlan = plans.some(plan => plan.planType === 'BASIC');
   const hasEnhancedPlan = plans.some(plan => plan.planType === 'ENHANCED_BASIC');
 
@@ -2377,7 +2377,11 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                 </tr>
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.inpatientCopay) ? `
-                
+                <tr>
+                    <td class="benefit-name">Inpatient Copay</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'inpatientCopay')}</td>`).join('')}
+                </tr>
+                ` : ''}
                 ${plans.some(plan => plan.categoriesData?.diagnosticTests) ? `
                 <tr>
                     <td class="benefit-name">Diagnostic Tests & Procedures</td>
@@ -2394,11 +2398,6 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                 <tr>
                     <td class="benefit-name">Consultant's, Surgeon's and Anesthetist's Fees</td>
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'consultantFees')}</td>`).join('')}
-                </tr>
-                ` : ''}
-                <tr>
-                    <td class="benefit-name">Inpatient Copay</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'inpatientCopay')}</td>`).join('')}
                 </tr>
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.inpatientOutNetwork) ? `
@@ -2587,13 +2586,13 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     <td class="benefit-name">Total Premium_${getPremiumLabelB()}</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.catBMembers * plan.catBPremium).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
-         <tr style="background-color: #c7d2fe;">
-                    <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Members</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
+                <tr style="background-color: #fef3c7;">
+                    <td class="benefit-name" style="font-weight: bold; background-color: #fbbf24; color: #000;">Total Members</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #fef3c7;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
                 </tr>
-                <tr style="background-color: #c7d2fe;">
-                    <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Premium</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.totalPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                <tr style="background-color: #fef3c7;">
+                    <td class="benefit-name" style="font-weight: bold; background-color: #fbbf24; color: #000;">Total Premium</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #fef3c7;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.totalPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
                     <td class="benefit-name">PSP Fund (37/member)</td>
@@ -2611,9 +2610,9 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     <td class="benefit-name">VAT (5%)</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.vat.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
-          <tr class="grand-total-row" style="background-color: #a5b4fc;">
-                    <td style="font-size: 11px; font-weight: bold; background-color: #a5b4fc; color: #1e1b4b;">GRAND TOTAL</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #a5b4fc; color: #1e1b4b;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                <tr class="grand-total-row" style="background-color: #22c55e;">
+                    <td style="font-size: 11px; font-weight: bold; background-color: #16a34a; color: #fff;">GRAND TOTAL</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #22c55e; color: #fff;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
             </tbody>
         </table>
@@ -3661,7 +3660,6 @@ function PlanGenerator() {
   const [planType, setPlanType] = useState('SME');
   const [plans, setPlans] = useState([]);
   const [showDHAEnhancedSelector, setShowDHAEnhancedSelector] = useState(false);
-const [showCustomCompanyManager, setShowCustomCompanyManager] = useState(false);
 const [currentPlan, setCurrentPlan] = useState({
   id: null,
   planType: 'SME',
@@ -3986,6 +3984,33 @@ if (isCustom) {
       
       // Automatically open DHA Enhanced selector
       setShowDHAEnhancedSelector(true);
+    } else if (newPlanType === 'ENHANCED_CUSTOM') {
+      // Initialize for ENHANCED_CUSTOM - same structure as SME
+      setCurrentPlan({
+        id: null,
+        planType: 'ENHANCED_CUSTOM',
+        providerName: '',
+        selectedCategories: [],
+        categoriesData: {},
+        catAMembers: 0,
+        catAPremium: 0,
+        catBMembers: 0,
+        catBPremium: 0,
+        catCMembers: 0,
+        catCPremium: 0,
+        catDMembers: 0,
+        catDPremium: 0,
+        dubaiMembers: 0,
+        northernEmiratesMembers: 0,
+        policyFee: 0,
+        isRecommended: false,
+        isRenewal: false
+      });
+      
+      setCompanyInfo(prev => ({
+        ...prev,
+        tpa: 'NAS'
+      }));
     } else if (newPlanType === 'BASIC') {
       setCurrentPlan({
         id: null,
@@ -4795,7 +4820,7 @@ const showEditableEnhancedBasicFields = () => {
 };
 
   const { companyInfoBenefits, inpatientBenefits, outpatientBenefits, otherBenefits } = 
-    planType === 'SME' ? getSMEBenefits() : { companyInfoBenefits: [], inpatientBenefits: [], outpatientBenefits: [], otherBenefits: [] };
+    (planType === 'SME' || planType === 'ENHANCED_CUSTOM') ? getSMEBenefits() : { companyInfoBenefits: [], inpatientBenefits: [], outpatientBenefits: [], otherBenefits: [] };
   
   const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBenefits: [] };
 
@@ -4835,6 +4860,18 @@ const showEditableEnhancedBasicFields = () => {
       <input
         type="radio"
         name="planType"
+        checked={planType === 'ENHANCED_CUSTOM'}
+        onClick={() => handlePlanTypeChange('ENHANCED_CUSTOM')}
+        onChange={() => {}}
+        className="w-4 h-4 text-purple-600 focus:ring-2 focus:ring-purple-500"
+      />
+      <span className="text-sm font-bold text-purple-700">ENHANCED BASIC (Custom)</span>
+    </label>
+    
+    <label className="flex items-center space-x-2 cursor-pointer">
+      <input
+        type="radio"
+        name="planType"
         checked={planType === 'SME'}
         onClick={() => handlePlanTypeChange('SME')}
         onChange={() => {}}
@@ -4843,14 +4880,6 @@ const showEditableEnhancedBasicFields = () => {
       <span className="text-sm font-bold text-indigo-700">SME</span>
     </label>
   </div>
-  
-  {/* ADD CUSTOM COMPANY BUTTON - MOVED HERE */}
-  <button
-    onClick={() => setShowCustomCompanyManager(true)}
-    className="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-purple-700 transition flex items-center gap-1"
-  >
-    ➕ Add Custom Company
-  </button>
 </div>
 
       <div className="flex justify-between items-center mb-4">
@@ -5102,7 +5131,7 @@ const showEditableEnhancedBasicFields = () => {
                   </select>
                 </div>
 
-              {planType === 'SME' && (
+              {(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
                 <>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Categories *</label>
@@ -5148,8 +5177,8 @@ const showEditableEnhancedBasicFields = () => {
                 </>
               )}
 
-             {/* Plan Tag textarea for SME - replaces Recommended/Renewal checkboxes */}
-{planType === 'SME' && (
+             {/* Plan Tag textarea for SME and ENHANCED_CUSTOM - replaces Recommended/Renewal checkboxes */}
+{(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
   <div className="mt-3">
     <label className="block text-xs font-bold text-gray-700 mb-1">
       Plan Tag (e.g., Renewal, New Business) - Will display as: Provider Name - Tag
@@ -5193,8 +5222,8 @@ const showEditableEnhancedBasicFields = () => {
           )}
 
 
-          {/* SME PLAN BENEFITS */}
-          {planType === 'SME' && currentPlan.selectedCategories.length > 0 && (
+          {/* SME and ENHANCED_CUSTOM PLAN BENEFITS */}
+          {(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && currentPlan.selectedCategories.length > 0 && (
             <>
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border-2 border-green-200">
                 <BenefitSectionTable
@@ -5246,7 +5275,7 @@ const showEditableEnhancedBasicFields = () => {
             
             <div className="grid grid-cols-2 gap-3">
               {/* For BASIC and ENHANCED_BASIC - show LSB/HSB or CAT A/B */}
-              {planType !== 'SME' && (
+              {planType !== 'SME' && planType !== 'ENHANCED_CUSTOM' && (
                 <>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">
@@ -5320,8 +5349,8 @@ const showEditableEnhancedBasicFields = () => {
                 </>
               )}
 
-              {/* For SME - show only selected categories */}
-              {planType === 'SME' && (
+              {/* For SME and ENHANCED_CUSTOM - show only selected categories */}
+              {(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
                 <>
                   {/* Cat A - show only if selected */}
                   {currentPlan.selectedCategories?.includes('CAT A') && (
@@ -5763,13 +5792,6 @@ const showEditableEnhancedBasicFields = () => {
     onClose={() => setShowDHAEnhancedSelector(false)}
   />
 )}
-
-{/* CUSTOM COMPANY MANAGER MODAL */}
-<CustomCompanyManager
-  isOpen={showCustomCompanyManager}
-  onClose={() => setShowCustomCompanyManager(false)}
-  onCompanyAdded={() => {}}
-/>
 </div>
 );
 }
