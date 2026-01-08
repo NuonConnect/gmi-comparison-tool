@@ -285,6 +285,14 @@ const PRESCRIBED_PHYSIOTHERAPY_NETWORK_OPTIONS = [
 const CATEGORY_OPTIONS = ['CAT A', 'CAT B', 'CAT C', 'CAT D'];
 const BASIC_CATEGORY_OPTIONS = ['LSB', 'HSB'];
 
+// ENHANCED_CUSTOM Network Options
+const ENHANCED_CUSTOM_NETWORK_OPTIONS = [
+  'PCP-C',
+  'PCP-RN3',
+  'PCP-RN3+DHA-H',
+  'RN3 (OP restricted to Clinics)'
+];
+
 // BASIC Plan Default Values for AED 150,000
 const BASIC_150K_DEFAULTS = {
   inpatientCopay: { 'LSB': '20% co-insurance payable by the insured with a cap of AED 500 payable per encounter, An annual aggregate cap of AED 1,000', 'HSB': '20% co-insurance payable by the insured with a cap of AED 500 payable per encounter, An annual aggregate cap of AED 1,000' },
@@ -2178,14 +2186,14 @@ tr:not(.section-header) td:first-child {
     text-align: left;
 }
 .benefit-cell { background: #fff; padding: 1.5mm; word-wrap: break-word; text-align: center; }
-.benefit-cell.highlighted { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 2px solid #f59e0b; font-weight: bold; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3); }
+.benefit-cell.highlighted { background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); border: 2px solid #6366f1; font-weight: bold; box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3); }
 .benefit-cell.recommended { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 2px solid #10b981; font-weight: bold; }
 .benefit-cell.renewal { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; font-weight: bold; }
-.benefit-cell.highlighted-benefit { background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important; border: 2px solid #ffc107 !important; font-weight: bold !important; box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3) !important; }
+.benefit-cell.highlighted-benefit { background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%) !important; border: 2px solid #6366f1 !important; font-weight: bold !important; box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3) !important; }
 .badge { display: inline-block; padding: 1mm 2mm; border-radius: 1mm; font-size: 8px; font-weight: bold; margin-left: 2mm; color: #fff; }
 .recommended-badge { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
 .renewal-badge { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-.highlighted-badge { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.highlighted-badge { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
 .premium-summary { background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%); padding: 2mm; border-radius: 1mm; border: 1px solid #93c5fd; margin-top: 1mm; }
 .premium-row { display: flex; justify-content: space-between; margin-bottom: 0.5mm; font-size: 8px; }
 .premium-row.grand-total { border-top: 1px solid #4338ca; padding-top: 1mm; margin-top: 1mm; font-weight: bold; font-size: 9px; color: #1e40af; }
@@ -2223,7 +2231,7 @@ tr:not(.section-header) td:first-child {
 .tag { display: inline-block; padding: 1mm 2mm; border-radius: 1mm; font-size: 8px; font-weight: bold; margin-left: 2mm; color: #fff; }
 .tag-recommended { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
 .tag-renewal { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-.tag-highlighted { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.tag-highlighted { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
 .plan-header { text-align: center; vertical-align: top; }
 .details-text { font-size: 8px; color: #666; margin-top: 1mm; font-style: italic; }
 .category-info { background: #f8fafc; padding: 1mm 2mm; border-radius: 1mm; margin: 1mm 0; font-size: 8px; border-left: 3px solid #4f46e5; }
@@ -3713,6 +3721,9 @@ const [currentPlan, setCurrentPlan] = useState({
   useEffect(() => {
     if (planType === 'BASIC' && companyInfo.tpa && BASIC_TPA_NETWORK_MAPPING[companyInfo.tpa]) {
       setNetworkOptions(BASIC_TPA_NETWORK_MAPPING[companyInfo.tpa]);
+    } else if (planType === 'ENHANCED_CUSTOM') {
+      // Use custom network options for ENHANCED_CUSTOM
+      setNetworkOptions(ENHANCED_CUSTOM_NETWORK_OPTIONS);
     } else if (planType === 'SME' && companyInfo.tpa && TPA_NETWORK_MAPPING[companyInfo.tpa]) {
       setNetworkOptions(TPA_NETWORK_MAPPING[companyInfo.tpa]);
     }
@@ -4541,8 +4552,9 @@ const handleBackToNormal = () => {
 
   const getSMEBenefits = () => {
   // UPDATED: Added Pre Existing Condition field and Area of Cover
+  // For ENHANCED_CUSTOM, area of cover has no dropdown (textarea only)
   const companyInfoBenefits = [
-    { field: 'areaOfCover', label: 'Area of Cover', options: AREA_OF_COVER_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: false },
+    { field: 'areaOfCover', label: 'Area of Cover', options: planType === 'ENHANCED_CUSTOM' ? [] : AREA_OF_COVER_OPTIONS, showMainValue: planType !== 'ENHANCED_CUSTOM', hasTextArea: true, canHighlight: false },
     { field: 'network', label: 'Network', options: networkOptions, showMainValue: true, hasTextArea: false, canHighlight: false },
     { field: 'aggregateLimit', label: 'Aggregate Limit', options: AGGREGATE_LIMIT_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: false },
     { field: 'preExistingCondition', label: 'Pre Existing Condition', options: [], showMainValue: false, hasTextArea: true, canHighlight: true }
