@@ -1982,19 +1982,39 @@ const formatFieldValue = (value) => {
 };
 
 const calculatePlanTotals = (plan) => {
-  const catATotal = plan.catAMembers * plan.catAPremium;
-  const catBTotal = plan.catBMembers * plan.catBPremium;
-  const catCTotal = plan.catCMembers * plan.catCPremium;
-  const catDTotal = plan.catDMembers * plan.catDPremium;
+  // Convert string values to numbers
+  const catAPremium = parseFloat(plan.catAPremium) || 0;
+  const catBPremium = parseFloat(plan.catBPremium) || 0;
+  const catCPremium = parseFloat(plan.catCPremium) || 0;
+  const catDPremium = parseFloat(plan.catDPremium) || 0;
+  const policyFee = parseFloat(plan.policyFee) || 0;
+  
+  const catATotal = plan.catAMembers * catAPremium;
+  const catBTotal = plan.catBMembers * catBPremium;
+  const catCTotal = plan.catCMembers * catCPremium;
+  const catDTotal = plan.catDMembers * catDPremium;
   
   const totalMembers = plan.catAMembers + plan.catBMembers + plan.catCMembers + plan.catDMembers;
   const totalPremium = catATotal + catBTotal + catCTotal + catDTotal;
   const pspFund = plan.dubaiMembers * 37;
   const icpCharges = plan.northernEmiratesMembers * 24;
-  const vat = (totalPremium + pspFund + icpCharges + plan.policyFee) * 0.05;
-  const grandTotal = totalPremium + pspFund + icpCharges + plan.policyFee + vat;
+  const vat = (totalPremium + pspFund + icpCharges + policyFee) * 0.05;
+  const grandTotal = totalPremium + pspFund + icpCharges + policyFee + vat;
 
-  return { ...plan, totalMembers, totalPremium, pspFund, icpCharges, vat, grandTotal };
+  return { 
+    ...plan, 
+    catAPremium, 
+    catBPremium, 
+    catCPremium, 
+    catDPremium, 
+    policyFee,
+    totalMembers, 
+    totalPremium, 
+    pspFund, 
+    icpCharges, 
+    vat, 
+    grandTotal 
+  };
 };
 
 const generateReferenceNumber = () => {
@@ -2588,34 +2608,81 @@ ${plans.some(p => p.categoriesData?.outPatientMaternity) ? `
                 </tr>
                 `).join('')}
                 
-                <tr class="section-header">
+          <tr class="section-header">
                     <td colspan="${plans.length + 1}">PREMIUM DETAILS</td>
                 </tr>
+                ${(() => {
+                  // Collect all unique categories across all plans
+                  const allCategories = new Set();
+                  plans.forEach(plan => {
+                    if (plan.selectedCategories) {
+                      plan.selectedCategories.forEach(cat => allCategories.add(cat));
+                    }
+                  });
+                  
+                  // Define category mapping for display and data access
+                  const categoryConfig = {
+                    'CAT A': { members: 'catAMembers', premium: 'catAPremium', label: 'Category A' },
+                    'CAT B': { members: 'catBMembers', premium: 'catBPremium', label: 'Category B' },
+                    'CAT C': { members: 'catCMembers', premium: 'catCPremium', label: 'Category C' },
+                    'CAT D': { members: 'catDMembers', premium: 'catDPremium', label: 'Category D' },
+                    'LSB': { members: 'catAMembers', premium: 'catAPremium', label: 'LSB' },
+                    'HSB': { members: 'catBMembers', premium: 'catBPremium', label: 'HSB' }
+                  };
+                  
+                  // Sort categories in logical order
+                  const categoryOrder = ['CAT A', 'LSB', 'CAT B', 'HSB', 'CAT C', 'CAT D'];
+                  const sortedCategories = Array.from(allCategories).sort((a, b) => {
+                    return categoryOrder.indexOf(a) - categoryOrder.indexOf(b);
+                  });
+                  
+                  let premiumRows = '';
+                  
+                  // Generate rows for each category
+                  sortedCategories.forEach(cat => {
+                    const config = categoryConfig[cat];
+                    if (!config) return;
+                    
+                    // Members row
+                    premiumRows += `
                 <tr>
-                    <td class="benefit-name">${getPremiumLabelA()} Members</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.catAMembers}</td>`).join('')}
-                </tr>
+                    <td class="benefit-name">${config.label} Members</td>
+                    ${plans.map(plan => {
+                      const hasCategory = plan.selectedCategories?.includes(cat);
+                      const value = hasCategory ? (plan[config.members] || 0) : '-';
+                      return `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${value}</td>`;
+                    }).join('')}
+                </tr>`;
+                    
+                    // Premium per person row
+                    premiumRows += `
                 <tr>
-                    <td class="benefit-name">${getPremiumLabelB()} Members</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.catBMembers}</td>`).join('')}
-                </tr>
+                    <td class="benefit-name">Average Premium Per Person_${config.label} (AED)</td>
+                    ${plans.map(plan => {
+                      const hasCategory = plan.selectedCategories?.includes(cat);
+                      const value = hasCategory ? `AED ${(plan[config.premium] || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '-';
+                      return `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${value}</td>`;
+                    }).join('')}
+                </tr>`;
+                    
+                    // Total premium for category row
+                    premiumRows += `
                 <tr>
-                    <td class="benefit-name">Average Premium Per Person_${getPremiumLabelA()}</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.catAPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
-                </tr>
-                <tr>
-                    <td class="benefit-name">Average Premium Per Person_${getPremiumLabelB()}</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.catBPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
-                </tr>
-                <tr>
-                    <td class="benefit-name">Total Premium_${getPremiumLabelA()}</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.catAMembers * plan.catAPremium).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
-                </tr>
-                <tr>
-                    <td class="benefit-name">Total Premium_${getPremiumLabelB()}</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.catBMembers * plan.catBPremium).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
-                </tr>
-             <tr style="background-color: #c7d2fe;">
+                    <td class="benefit-name">Total Premium_${config.label}</td>
+                    ${plans.map(plan => {
+                      const hasCategory = plan.selectedCategories?.includes(cat);
+                      const members = plan[config.members] || 0;
+                      const premium = plan[config.premium] || 0;
+                      const total = members * premium;
+                      const value = hasCategory ? `AED ${total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '-';
+                      return `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${value}</td>`;
+                    }).join('')}
+                </tr>`;
+                  });
+                  
+                  return premiumRows;
+                })()}
+                <tr style="background-color: #c7d2fe;">
                     <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Members</td>
                     ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
                 </tr>
@@ -2643,7 +2710,6 @@ ${plans.some(p => p.categoriesData?.outPatientMaternity) ? `
                     <td style="font-size: 11px; font-weight: bold; background-color: #16a34a; color: #fff;">GRAND TOTAL</td>
                     ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #22c55e; color: #fff;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
-            </tbody>
         </table>
         
         ${hasComment ? `
@@ -4286,6 +4352,34 @@ if (isCustom) {
     }
   };
 
+  const duplicatePlan = (plan) => {
+    // Create a copy with a new ID
+    const duplicatedPlan = {
+      ...plan,
+      id: Date.now(),
+      providerName: plan.providerName + ' (Copy)',
+      // Deep copy categoriesData to avoid reference issues
+      categoriesData: JSON.parse(JSON.stringify(plan.categoriesData)),
+      selectedCategories: [...plan.selectedCategories]
+    };
+    
+    // Calculate totals for the duplicated plan
+    const planWithTotals = calculatePlanTotals(duplicatedPlan);
+    
+    // Add to plans list
+    setPlans([...plans, planWithTotals]);
+    
+    // Copy highlighted items if they exist
+    if (highlightedItems[plan.id]) {
+      setHighlightedItems(prev => ({
+        ...prev,
+        [planWithTotals.id]: { ...prev[plan.id] }
+      }));
+    }
+    
+    alert(`✅ Plan duplicated successfully! "${plan.providerName}" has been copied.`);
+  };
+
   const saveAndDownload = async () => {
     if (!companyInfo.companyName) {
       alert('Please enter company name');
@@ -5348,16 +5442,14 @@ const showEditableEnhancedBasicFields = () => {
                       {planType === 'BASIC' ? 'Average Premium Per Person_LSB (AED)' : 'Average Premium Per Person_CAT A (AED)'}
                     </label>
                     <input
-                      type="text"
-                      value={currentPlan.catAPremium ? currentPlan.catAPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/,/g, '');
-                        if (!isNaN(value) && value !== '' && value !== '.') {
-                          handleNumberChange('catAPremium', parseFloat(value));
-                        } else if (value === '' || value === '.') {
-                          handleNumberChange('catAPremium', 0);
-                        }
-                      }}
+  type="text"
+  value={currentPlan.catAPremium || ''}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      handleNumberChange('catAPremium', value === '' ? 0 : value);
+    }
+  }}
                       className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
                       placeholder="0"
                     />
@@ -5382,20 +5474,18 @@ const showEditableEnhancedBasicFields = () => {
                         <label className="block text-xs font-bold text-gray-700 mb-1">
                           {planType === 'BASIC' ? 'Average Premium Per Person_HSB (AED)' : 'Average Premium Per Person_CAT B (AED)'}
                         </label>
-                        <input
-                          type="text"
-                          value={currentPlan.catBPremium ? currentPlan.catBPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, '');
-                            if (!isNaN(value) && value !== '' && value !== '.') {
-                              handleNumberChange('catBPremium', parseFloat(value));
-                            } else if (value === '' || value === '.') {
-                              handleNumberChange('catBPremium', 0);
-                            }
-                          }}
-                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
-                          placeholder="0"
-                        />
+                      <input
+  type="text"
+  value={currentPlan.catBPremium || ''}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      handleNumberChange('catBPremium', value === '' ? 0 : value);
+    }
+  }}
+  className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+  placeholder="0"
+/>
                       </div>
                     </>
                   ) : null}
@@ -5421,17 +5511,15 @@ const showEditableEnhancedBasicFields = () => {
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_Cat A (AED)</label>
-                        <input
-                          type="text"
-                          value={currentPlan.catAPremium ? currentPlan.catAPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, '');
-                            if (!isNaN(value) && value !== '' && value !== '.') {
-                              handleNumberChange('catAPremium', parseFloat(value));
-                            } else if (value === '' || value === '.') {
-                              handleNumberChange('catAPremium', 0);
-                            }
-                          }}
+                     <input
+  type="text"
+  value={currentPlan.catAPremium || ''}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      handleNumberChange('catAPremium', value === '' ? 0 : value);
+    }
+  }}
                           className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
                           placeholder="0"
                         />
@@ -5454,20 +5542,18 @@ const showEditableEnhancedBasicFields = () => {
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_Cat B (AED)</label>
-                        <input
-                          type="text"
-                          value={currentPlan.catBPremium ? currentPlan.catBPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, '');
-                            if (!isNaN(value) && value !== '' && value !== '.') {
-                              handleNumberChange('catBPremium', parseFloat(value));
-                            } else if (value === '' || value === '.') {
-                              handleNumberChange('catBPremium', 0);
-                            }
-                          }}
-                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
-                          placeholder="0"
-                        />
+                       <input
+  type="text"
+  value={currentPlan.catBPremium || ''}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      handleNumberChange('catBPremium', value === '' ? 0 : value);
+    }
+  }}
+  className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+  placeholder="0"
+/>
                       </div>
                     </>
                   )}
@@ -5487,20 +5573,18 @@ const showEditableEnhancedBasicFields = () => {
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_Cat C (AED)</label>
-                        <input
-                          type="text"
-                          value={currentPlan.catCPremium ? currentPlan.catCPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, '');
-                            if (!isNaN(value) && value !== '' && value !== '.') {
-                              handleNumberChange('catCPremium', parseFloat(value));
-                            } else if (value === '' || value === '.') {
-                              handleNumberChange('catCPremium', 0);
-                            }
-                          }}
-                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
-                          placeholder="0"
-                        />
+                       <input
+  type="text"
+  value={currentPlan.catCPremium || ''}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      handleNumberChange('catCPremium', value === '' ? 0 : value);
+    }
+  }}
+  className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+  placeholder="0"
+/>
                       </div>
                     </>
                   )}
@@ -5521,19 +5605,18 @@ const showEditableEnhancedBasicFields = () => {
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_Cat D (AED)</label>
                         <input
-                          type="text"
-                          value={currentPlan.catDPremium ? currentPlan.catDPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, '');
-                            if (!isNaN(value) && value !== '' && value !== '.') {
-                              handleNumberChange('catDPremium', parseFloat(value));
-                            } else if (value === '' || value === '.') {
-                              handleNumberChange('catDPremium', 0);
-                            }
-                          }}
-                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
-                          placeholder="0"
-                        />
+  type="text"
+  
+  value={currentPlan.catDPremium || ''}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      handleNumberChange('catDPremium', value === '' ? 0 : value);
+    }
+  }}
+  className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+  placeholder="0"
+/>
                       </div>
                     </>
                   )}
@@ -5568,20 +5651,18 @@ const showEditableEnhancedBasicFields = () => {
 
             <div className="mt-3">
               <label className="block text-xs font-bold text-gray-700 mb-1">Policy Fee (AED)</label>
-              <input
-                type="text"
-                value={currentPlan.policyFee ? currentPlan.policyFee.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/,/g, '');
-                  if (!isNaN(value) && value !== '' && value !== '.') {
-                    handleNumberChange('policyFee', parseFloat(value));
-                  } else if (value === '' || value === '.') {
-                    handleNumberChange('policyFee', 0);
-                  }
-                }}
-                className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
-                placeholder="0"
-              />
+             <input
+  type="text"
+  value={currentPlan.policyFee || ''}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      handleNumberChange('policyFee', value === '' ? 0 : value);
+    }
+  }}
+  className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+  placeholder="0"
+/>
             </div>
           </div>
 
@@ -5812,6 +5893,14 @@ const showEditableEnhancedBasicFields = () => {
                   >
                     ✏️ Edit
                   </button>
+
+                  <button
+                    onClick={() => duplicatePlan(plan)}
+                    className="bg-purple-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-purple-700"
+                  >
+                    📋 Duplicate
+                  </button>
+
                   <button
                     onClick={() => deletePlan(plan.id)}
                     className="bg-red-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-red-700"
