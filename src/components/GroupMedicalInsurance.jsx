@@ -169,6 +169,7 @@ const CUSTOM_COMPANY_DEFAULT_TEMPLATE = {
   aggregateLimit: 'AED 150,000',
   areaOfCover: 'UAE',
   preExistingCondition: '',
+  medicalUnderwriting: '',
   
   // Inpatient Benefits
   roomType: 'PRIVATE',
@@ -188,8 +189,9 @@ const CUSTOM_COMPANY_DEFAULT_TEMPLATE = {
   medicineType: 'Formulary',
   prescribedPhysiotherapy: '',
   
-  // Other Benefits
-  maternity: '',
+// Other Benefits - CHANGE 2: Split maternity into two fields
+  inPatientMaternity: '',
+  outPatientMaternity: '',
   routineDental: '',
   routineOptical: '',
   preventiveServices: 'Covered as per DHA',
@@ -254,6 +256,13 @@ const COVERAGE_OPTIONS = [
   'Covered with 30% copay',
   'Not Covered', 
   'Other'
+];
+// CHANGE 2: Add Out-Patient Maternity Options
+const OUTPATIENT_MATERNITY_OPTIONS = [
+  'Covered with Nil copay',
+  'Covered with 10% copay',
+  'Covered with 20% copay',
+  'Not Covered'
 ];
 
 const CONSULTATION_DEDUCTIBLE_OPTIONS = ['No Deductible', '20% co-pay', '20% co-pay up to max AED 20/-', '20% co-pay up to max AED 25/-', '20% co-pay up to max AED 50/-', '10% co-pay', '10% co-pay up to max AED 25/-', '10% co-pay up to max AED 50/-', 'Other'];
@@ -2316,6 +2325,12 @@ ${hasSMEPlan && plans.some(plan => plan.categoriesData?.preExistingCondition) ? 
     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'preExistingCondition')}</td>`).join('')}
 </tr>
 ` : ''}
+${plans.some(p => p.categoriesData?.medicalUnderwriting) ? `
+<tr>
+    <td class="benefit-name">Medical Underwriting</td>
+    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'medicalUnderwriting')}</td>`).join('')}
+</tr>
+` : ''}
 
 <!-- DHA ENHANCED TEMPLATE FIELDS - Show only if DHA plans exist -->
 <!-- DHA ENHANCED TEMPLATE FIELDS - Show only if DHA plans exist -->
@@ -2470,12 +2485,18 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                 <tr class="section-header">
                     <td colspan="${plans.length + 1}">OTHER BENEFITS</td>
                 </tr>
-                ${plans.some(plan => plan.categoriesData?.maternity) ? `
-                <tr>
-                    <td class="benefit-name">Maternity</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'maternity')}</td>`).join('')}
-                </tr>
-                ` : ''}
+             ${plans.some(p => p.categoriesData?.inPatientMaternity) ? `
+<tr>
+    <td class="benefit-name">In-Patient Maternity</td>
+    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'inPatientMaternity')}</td>`).join('')}
+</tr>
+` : ''}
+${plans.some(p => p.categoriesData?.outPatientMaternity) ? `
+<tr>
+    <td class="benefit-name">Out-Patient Maternity</td>
+    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'outPatientMaternity')}</td>`).join('')}
+</tr>
+` : ''}
                 ${plans.some(plan => plan.categoriesData?.routineDental) ? `
                 <tr>
                     <td class="benefit-name">Dental Benefits</td>
@@ -2618,9 +2639,9 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     <td class="benefit-name">VAT (5%)</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.vat.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
-              <tr class="grand-total-row" style="background-color: #a5b4fc;">
-                    <td style="font-size: 11px; font-weight: bold; background-color: #a5b4fc; color: #1e1b4b;">GRAND TOTAL</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #a5b4fc; color: #1e1b4b;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                <tr class="grand-total-row" style="background-color: #22c55e;">
+                    <td style="font-size: 11px; font-weight: bold; background-color: #16a34a; color: #fff;">GRAND TOTAL</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #22c55e; color: #fff;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
             </tbody>
         </table>
@@ -2660,35 +2681,47 @@ const BenefitSectionTable = ({
   currentPlanId,
   customFields = []
 }) => {
-  const handleCopyFromFirst = () => {
-    if (categories.length > 1) {
-      const firstCategory = categories[0];
+  // CHANGE 1: Fixed Copy function to work immediately when categories already have data
+const handleCopyFromFirst = () => {
+  if (categories.length > 1) {
+    const firstCategory = categories[0];
+    let copiedCount = 0;
+    
+    // Copy all benefits - both dropdown values AND textarea/Other values
+    benefits.forEach(benefit => {
+      // Get the main dropdown value for first category
+      const firstCategoryValue = categoriesData[benefit.field]?.[firstCategory] || '';
+      // Get the "Other" textarea value for first category
+      const firstCategoryOtherValue = categoriesData[benefit.field]?.[`${firstCategory}Other`] || '';
       
-      benefits.forEach(benefit => {
-        const firstCategoryValue = categoriesData[benefit.field]?.[firstCategory] || '';
-        const firstCategoryOtherValue = categoriesData[benefit.field]?.[`${firstCategory}Other`] || '';
-        
-        categories.slice(1).forEach(category => {
-          if (benefit.showMainValue && firstCategoryValue !== '') {
-            onChange(benefit.field, category, firstCategoryValue);
-          }
-          if (firstCategoryOtherValue !== '') {
-            onChange(benefit.field, `${category}Other`, firstCategoryOtherValue);
-          }
-        });
-      });
-      
-      customFields.forEach(field => {
-        const firstCategoryValue = categoriesData[field.key]?.[firstCategory] || '';
+      categories.slice(1).forEach(category => {
+        // Always copy main dropdown value if it exists (even if target already has a value)
         if (firstCategoryValue !== '') {
-          categories.slice(1).forEach(category => {
-            onChange(field.key, category, firstCategoryValue);
-          });
+          onChange(benefit.field, category, firstCategoryValue);
+          copiedCount++;
+        }
+        // Always copy Other/textarea value if it exists
+        if (firstCategoryOtherValue !== '') {
+          onChange(benefit.field, `${category}Other`, firstCategoryOtherValue);
+          copiedCount++;
         }
       });
-      alert(`Copied ${categories[0]} values to all other categories for ${sectionTitle}`);
-    }
-  };
+    });
+    
+    // Also copy custom fields
+    customFields.forEach(field => {
+      const firstCategoryValue = categoriesData[field.key]?.[firstCategory] || '';
+      if (firstCategoryValue !== '') {
+        categories.slice(1).forEach(category => {
+          onChange(field.key, category, firstCategoryValue);
+          copiedCount++;
+        });
+      }
+    });
+    
+    alert(`✓ Copied ${categories[0]} values to all other categories (${copiedCount} fields updated)`);
+  }
+};
 
   // Filter out custom fields from regular benefits to avoid duplication
   const regularBenefits = benefits.filter(benefit => 
@@ -2746,37 +2779,44 @@ const BenefitSectionTable = ({
                     )}
                   </div>
                 </td>
-                {categories.map(category => (
-                  <td key={category} className="p-1 border-r border-gray-200">
-                    {benefit.showMainValue && benefit.options && (
-                      <select
-                        value={categoriesData[benefit.field]?.[category] || ''}
-                        onChange={(e) => onChange(benefit.field, category, e.target.value)}
-                        className="w-full p-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500 mb-1"
-                      >
-                        <option value="">Select...</option>
-                        {benefit.options.map(option => (
-                          <option key={option} value={option}>{option}</option>
-                        ))}
-                      </select>
-                    )}
-                    {benefit.hasTextArea && (
-                      <textarea
-                        value={categoriesData[benefit.field]?.[`${category}Other`] || categoriesData[benefit.field]?.[category] || ''}
-                        onChange={(e) => {
-                          if (benefit.showMainValue) {
-                            onChange(benefit.field, `${category}Other`, e.target.value);
-                          } else {
-                            onChange(benefit.field, category, e.target.value);
-                          }
-                        }}
-                        className="w-full p-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500"
-                        rows="2"
-                        placeholder={`${benefit.label}...`}
-                      />
-                    )}
-                  </td>
-                ))}
+                {categories.map(category => {
+  const currentDropdownValue = categoriesData[benefit.field]?.[category] || '';
+  const hasDropdown = benefit.showMainValue && benefit.options && benefit.options.length > 0;
+  // CHANGE 5: Show textarea only when no dropdown exists OR when "Other" is selected
+  const showTextArea = benefit.hasTextArea && (!hasDropdown || currentDropdownValue === 'Other');
+  
+  return (
+    <td key={category} className="p-1 border-r border-gray-200">
+      {hasDropdown && (
+        <select
+          value={currentDropdownValue}
+          onChange={(e) => onChange(benefit.field, category, e.target.value)}
+          className="w-full p-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500 mb-1"
+        >
+          <option value="">Select...</option>
+          {benefit.options.map(option => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      )}
+      {showTextArea && (
+        <textarea
+          value={categoriesData[benefit.field]?.[`${category}Other`] || categoriesData[benefit.field]?.[category] || ''}
+          onChange={(e) => {
+            if (hasDropdown) {
+              onChange(benefit.field, `${category}Other`, e.target.value);
+            } else {
+              onChange(benefit.field, category, e.target.value);
+            }
+          }}
+          className="w-full p-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500"
+          rows="2"
+          placeholder={`${benefit.label}...`}
+        />
+      )}
+    </td>
+  );
+})}
               </tr>
             ))}
             
@@ -4557,7 +4597,7 @@ const handleBackToNormal = () => {
     { field: 'areaOfCover', label: 'Area of Cover', options: planType === 'ENHANCED_CUSTOM' ? [] : AREA_OF_COVER_OPTIONS, showMainValue: planType !== 'ENHANCED_CUSTOM', hasTextArea: true, canHighlight: false },
     { field: 'network', label: 'Network', options: networkOptions, showMainValue: true, hasTextArea: false, canHighlight: false },
     { field: 'aggregateLimit', label: 'Aggregate Limit', options: AGGREGATE_LIMIT_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: false },
-    { field: 'preExistingCondition', label: 'Pre Existing Condition', options: [], showMainValue: false, hasTextArea: true, canHighlight: true }
+    { field: 'medicalUnderwriting', label: 'Medical Underwriting', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
   ];
 
   // UPDATED: Inpatient benefits - moved IP Copay to end, added Organ Transplant and Kidney Dialysis
@@ -4583,7 +4623,8 @@ const handleBackToNormal = () => {
   ];
 
     const otherBenefits = [
-      { field: 'maternity', label: 'Maternity', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+      { field: 'inPatientMaternity', label: 'In-Patient Maternity', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+{ field: 'outPatientMaternity', label: 'Out-Patient Maternity', options: OUTPATIENT_MATERNITY_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
       { field: 'routineDental', label: 'Dental Benefits', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'routineOptical', label: 'Optical Benefits', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'preventiveServices', label: 'Preventive Services', options: PREVENTIVE_SERVICES_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
