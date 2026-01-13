@@ -2644,77 +2644,82 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
           <tr class="section-header">
                     <td colspan="${plans.length + 1}">PREMIUM DETAILS</td>
                 </tr>
-                ${(() => {
-                  // Collect all unique categories across all plans
-                  const allCategories = new Set();
-                  plans.forEach(plan => {
-                    if (plan.selectedCategories) {
-                      plan.selectedCategories.forEach(cat => allCategories.add(cat));
-                    }
-                  });
+                <tr class="section-header">
+    <td colspan="${plans.length + 1}">PREMIUM DETAILS</td>
+</tr>
+${(() => {
+  // FIXED: Define ALL possible category configurations
+  const ALL_CATEGORY_CONFIGS = [
+    { cat: 'CAT A', members: 'catAMembers', premium: 'catAPremium', label: 'Category A' },
+    { cat: 'CAT B', members: 'catBMembers', premium: 'catBPremium', label: 'Category B' },
+    { cat: 'CAT C', members: 'catCMembers', premium: 'catCPremium', label: 'Category C' },
+    { cat: 'CAT D', members: 'catDMembers', premium: 'catDPremium', label: 'Category D' },
+    { cat: 'LSB', members: 'catAMembers', premium: 'catAPremium', label: 'LSB' },
+    { cat: 'HSB', members: 'catBMembers', premium: 'catBPremium', label: 'HSB' }
+  ];
+  
+  // Collect ALL unique categories across ALL plans
+  const allCategories = new Set();
+  plans.forEach(plan => {
+    if (plan.selectedCategories) {
+      plan.selectedCategories.forEach(cat => allCategories.add(cat));
+    }
+  });
+  
+  // Sort categories in logical order
+  const categoryOrder = ['CAT A', 'LSB', 'CAT B', 'HSB', 'CAT C', 'CAT D'];
+  const sortedCategories = Array.from(allCategories).sort((a, b) => {
+    return categoryOrder.indexOf(a) - categoryOrder.indexOf(b);
+  });
+  
+  let premiumRows = '';
+  
+  // Generate rows for EACH category found across ALL plans
+  sortedCategories.forEach(cat => {
+    const config = ALL_CATEGORY_CONFIGS.find(c => c.cat === cat);
+    if (!config) return;
+    
+    // Members row - show "-" if plan doesn't have this category
+    premiumRows += `
+<tr>
+    <td class="benefit-name">${config.label} Members</td>
+    ${plans.map(plan => {
+      const hasCategory = plan.selectedCategories?.includes(cat);
+      const value = hasCategory ? (plan[config.members] || 0) : '-';
+      return `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${value}</td>`;
+    }).join('')}
+</tr>`;
+    
+    // Premium per person row
+    premiumRows += `
+<tr>
+    <td class="benefit-name">Average Premium Per Person_${config.label} (AED)</td>
+    ${plans.map(plan => {
+      const hasCategory = plan.selectedCategories?.includes(cat);
+      const value = hasCategory ? `AED ${(plan[config.premium] || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '-';
+      return `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${value}</td>`;
+    }).join('')}
+</tr>`;
+    
+    // Total premium for category row
+    premiumRows += `
+<tr>
+    <td class="benefit-name">Total Premium_${config.label}</td>
+    ${plans.map(plan => {
+      const hasCategory = plan.selectedCategories?.includes(cat);
+      const members = plan[config.members] || 0;
+      const premium = plan[config.premium] || 0;
+      const total = members * premium;
+      const value = hasCategory ? `AED ${total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '-';
+      return `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${value}</td>`;
+    }).join('')}
+</tr>`;
+  });
+  
+  return premiumRows;
+})()}
                   
-                  // Define category mapping for display and data access
-                  const categoryConfig = {
-                    'CAT A': { members: 'catAMembers', premium: 'catAPremium', label: 'Category A' },
-                    'CAT B': { members: 'catBMembers', premium: 'catBPremium', label: 'Category B' },
-                    'CAT C': { members: 'catCMembers', premium: 'catCPremium', label: 'Category C' },
-                    'CAT D': { members: 'catDMembers', premium: 'catDPremium', label: 'Category D' },
-                    'LSB': { members: 'catAMembers', premium: 'catAPremium', label: 'LSB' },
-                    'HSB': { members: 'catBMembers', premium: 'catBPremium', label: 'HSB' }
-                  };
-                  
-                  // Sort categories in logical order
-                  const categoryOrder = ['CAT A', 'LSB', 'CAT B', 'HSB', 'CAT C', 'CAT D'];
-                  const sortedCategories = Array.from(allCategories).sort((a, b) => {
-                    return categoryOrder.indexOf(a) - categoryOrder.indexOf(b);
-                  });
-                  
-                  let premiumRows = '';
-                  
-                  // Generate rows for each category
-                  sortedCategories.forEach(cat => {
-                    const config = categoryConfig[cat];
-                    if (!config) return;
-                    
-                    // Members row
-                    premiumRows += `
-                <tr>
-                    <td class="benefit-name">${config.label} Members</td>
-                    ${plans.map(plan => {
-                      const hasCategory = plan.selectedCategories?.includes(cat);
-                      const value = hasCategory ? (plan[config.members] || 0) : '-';
-                      return `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${value}</td>`;
-                    }).join('')}
-                </tr>`;
-                    
-                    // Premium per person row
-                    premiumRows += `
-                <tr>
-                    <td class="benefit-name">Average Premium Per Person_${config.label} (AED)</td>
-                    ${plans.map(plan => {
-                      const hasCategory = plan.selectedCategories?.includes(cat);
-                      const value = hasCategory ? `AED ${(plan[config.premium] || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '-';
-                      return `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${value}</td>`;
-                    }).join('')}
-                </tr>`;
-                    
-                    // Total premium for category row
-                    premiumRows += `
-                <tr>
-                    <td class="benefit-name">Total Premium_${config.label}</td>
-                    ${plans.map(plan => {
-                      const hasCategory = plan.selectedCategories?.includes(cat);
-                      const members = plan[config.members] || 0;
-                      const premium = plan[config.premium] || 0;
-                      const total = members * premium;
-                      const value = hasCategory ? `AED ${total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '-';
-                      return `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${value}</td>`;
-                    }).join('')}
-                </tr>`;
-                  });
-                  
-                  return premiumRows;
-                })()}
+   
                 <tr style="background-color: #c7d2fe;">
                     <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Members</td>
                     ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
