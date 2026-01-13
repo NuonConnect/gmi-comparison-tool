@@ -2878,10 +2878,12 @@ const handleCopyFromFirst = () => {
                     )}
                   </div>
                 </td>
-                {categories.map(category => {
-  const currentDropdownValue = categoriesData[benefit.field]?.[category] || '';
+{categories.map(category => {
+  // Apply default value if field is empty and has a default
+  const storedValue = categoriesData[benefit.field]?.[category] || '';
+  const currentDropdownValue = storedValue || (benefit.defaultValue || '');
   const hasDropdown = benefit.showMainValue && benefit.options && benefit.options.length > 0;
-  // CHANGE 5: Show textarea only when no dropdown exists OR when "Other" is selected
+  // Show textarea only when no dropdown exists OR when "Other" is selected
   const showTextArea = benefit.hasTextArea && (!hasDropdown || currentDropdownValue === 'Other');
   
   return (
@@ -4874,12 +4876,15 @@ const getDHAManualBenefits = () => {
     'Other'
   ];
 
+// Inpatient Benefits - with default values
+  const DHA_INPATIENT_DEFAULT_OPTIONS = ['Covered', 'Other'];
+
   // Inpatient Benefits
   const inpatientBenefits = [
-    { field: 'intensiveCareUnit', label: 'Intensive Care Unit', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-    { field: 'diagnosticTests', label: 'Diagnostic Tests And Procedures', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-    { field: 'drugsMedicines', label: 'Drugs and Medicines', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-    { field: 'doctorConsultations', label: 'Doctor, Surgeon & Specialist Consultations', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'intensiveCareUnit', label: 'Intensive Care Unit', options: DHA_INPATIENT_DEFAULT_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true, defaultValue: 'Covered' },
+    { field: 'diagnosticTests', label: 'Diagnostic Tests And Procedures', options: DHA_INPATIENT_DEFAULT_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true, defaultValue: 'Covered' },
+    { field: 'drugsMedicines', label: 'Drugs and Medicines', options: DHA_INPATIENT_DEFAULT_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true, defaultValue: 'Covered' },
+    { field: 'doctorConsultations', label: 'Doctor, Surgeon & Specialist Consultations', options: DHA_INPATIENT_DEFAULT_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true, defaultValue: 'Covered' },
     { field: 'organTransplant', label: 'Organ Transplant', options: DHA_ORGAN_TRANSPLANT_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
     { field: 'kidneyDialysis', label: 'Kidney Dialysis', options: DHA_KIDNEY_DIALYSIS_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
     { field: 'ipCoinsurance', label: 'IP Co-insurance', options: DHA_IP_COINSURANCE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
@@ -5318,11 +5323,11 @@ const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBen
                   onChange={(e) => handleTpaChange(e.target.value)}
                   className="w-full p-2 border-2 border-indigo-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500"
                 >
-                  {(planType === 'BASIC' ? BASIC_TPA_OPTIONS : TPA_OPTIONS).map(option => (
+                  {(planType === 'BASIC' ? [...BASIC_TPA_OPTIONS, 'Other'] : TPA_OPTIONS).map(option => (
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
-               {companyInfo.tpa === 'Other' && (planType === 'SME' || planType === 'ENHANCED_CUSTOM' || planType === 'DHA_MANUAL') && (
+               {companyInfo.tpa === 'Other' && (
   <textarea
     value={companyInfo.tpaManual}
     onChange={(e) => handleCompanyInfoChange('tpaManual', e.target.value)}
@@ -5413,8 +5418,33 @@ const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBen
                           {networkOptions.map(option => (
                             <option key={option} value={option}>{option}</option>
                           ))}
+                          <option value="Other">Other</option>
                         </select>
-                        {currentPlan.categoriesData?.network?.[currentPlan.selectedCategories[0]] && (
+                        {currentPlan.categoriesData?.network?.[currentPlan.selectedCategories[0]] === 'Other' && (
+                          <textarea
+                            value={currentPlan.categoriesData?.networkOther?.[currentPlan.selectedCategories[0]] || ''}
+                            onChange={(e) => {
+                              const networkOtherValue = e.target.value;
+                              setCurrentPlan(prev => {
+                                const networkOtherData = {};
+                                prev.selectedCategories.forEach(cat => {
+                                  networkOtherData[cat] = networkOtherValue;
+                                });
+                                return {
+                                  ...prev,
+                                  categoriesData: {
+                                    ...prev.categoriesData,
+                                    networkOther: networkOtherData
+                                  }
+                                };
+                              });
+                            }}
+                            className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 mt-2"
+                            rows="2"
+                            placeholder="Specify Network..."
+                          />
+                        )}
+                        {currentPlan.categoriesData?.network?.[currentPlan.selectedCategories[0]] && currentPlan.categoriesData?.network?.[currentPlan.selectedCategories[0]] !== 'Other' && (
                           <div className="text-xs text-green-600 mt-1 font-medium">
                             ✓ Network selected: {currentPlan.categoriesData.network[currentPlan.selectedCategories[0]]}
                           </div>
@@ -5646,7 +5676,7 @@ const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBen
                   </select>
                 </div>
 
-              {(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
+        {(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
                 <>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Categories *</label>
@@ -5664,10 +5694,31 @@ const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBen
                                 handleCategoryChange(newCategories);
                               }}
                               className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+                              disabled={planType === 'ENHANCED_CUSTOM' && currentPlan.selectedCategories.includes('LSB & HSB') && category !== 'LSB & HSB'}
                             />
                             <span className="text-xs font-medium text-gray-700">{category}</span>
                           </label>
                         ))}
+                        {/* LSB & HSB option only for ENHANCED_CUSTOM */}
+                        {planType === 'ENHANCED_CUSTOM' && (
+                          <label className="flex items-center space-x-2 cursor-pointer bg-amber-50 px-2 py-1 rounded border border-amber-300">
+                            <input
+                              type="checkbox"
+                              checked={currentPlan.selectedCategories.includes('LSB & HSB')}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  // When LSB & HSB is selected, clear other categories
+                                  handleCategoryChange(['LSB & HSB']);
+                                } else {
+                                  // When LSB & HSB is deselected, clear all
+                                  handleCategoryChange([]);
+                                }
+                              }}
+                              className="w-4 h-4 text-amber-600 focus:ring-2 focus:ring-amber-500"
+                            />
+                            <span className="text-xs font-bold text-amber-700">LSB & HSB</span>
+                          </label>
+                        )}
                       </div>
                       {currentPlan.selectedCategories.length > 0 && (
                         <div className="text-xs text-green-600 font-medium">
@@ -5677,11 +5728,11 @@ const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBen
                     </div>
                   </div>
 
-                  {currentPlan.selectedCategories.length > 0 && (
+            {currentPlan.selectedCategories.length > 0 && (
                     <BenefitSectionTable
                       sectionTitle="Company Coverage Details"
                       benefits={companyInfoBenefits}
-                      categories={currentPlan.selectedCategories}
+                      categories={currentPlan.selectedCategories.includes('LSB & HSB') ? ['LSB & HSB'] : currentPlan.selectedCategories}
                       categoriesData={currentPlan.categoriesData}
                       onChange={handleCategoryDataChange}
                       highlightedItems={highlightedItems}
@@ -5860,9 +5911,66 @@ const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBen
                 </>
               )}
 
-            {/* For SME, ENHANCED_CUSTOM, and DHA_MANUAL - show only selected categories */}
+  {/* For SME, ENHANCED_CUSTOM, and DHA_MANUAL - show only selected categories */}
 {(planType === 'SME' || planType === 'ENHANCED_CUSTOM' || planType === 'DHA_MANUAL') && (
                 <>
+                  {/* LSB & HSB - show only if selected (for ENHANCED_CUSTOM) */}
+                  {currentPlan.selectedCategories?.includes('LSB & HSB') && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">LSB Members</label>
+                        <input
+                          type="number"
+                          value={currentPlan.catAMembers || ''}
+                          onChange={(e) => handleNumberChange('catAMembers', parseInt(e.target.value) || 0)}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_LSB (AED)</label>
+                        <input
+                          type="text"
+                          value={currentPlan.catAPremium || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                              handleNumberChange('catAPremium', value === '' ? 0 : value);
+                            }
+                          }}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">HSB Members</label>
+                        <input
+                          type="number"
+                          value={currentPlan.catBMembers || ''}
+                          onChange={(e) => handleNumberChange('catBMembers', parseInt(e.target.value) || 0)}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_HSB (AED)</label>
+                        <input
+                          type="text"
+                          value={currentPlan.catBPremium || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                              handleNumberChange('catBPremium', value === '' ? 0 : value);
+                            }
+                          }}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+                          placeholder="0"
+                        />
+                      </div>
+                    </>
+                  )}
                   {/* Cat A - show only if selected */}
                   {currentPlan.selectedCategories?.includes('CAT A') && (
                     <>
