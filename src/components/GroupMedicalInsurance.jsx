@@ -2100,11 +2100,10 @@ function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber
     return highlightedItems[planId] && highlightedItems[planId][benefitKey];
   };
 
-  // Smart field detection - ENHANCED_CUSTOM is treated like SME for display
-  const hasSMEPlan = plans.some(plan => plan.planType === 'SME' || plan.planType === 'ENHANCED_CUSTOM');
-  const hasBasicPlan = plans.some(plan => plan.planType === 'BASIC');
-  const hasEnhancedPlan = plans.some(plan => plan.planType === 'ENHANCED_BASIC');
-
+const hasSMEPlan = plans.some(plan => plan.planType === 'SME' || plan.planType === 'ENHANCED_CUSTOM');
+const hasBasicPlan = plans.some(plan => plan.planType === 'BASIC');
+const hasEnhancedPlan = plans.some(plan => plan.planType === 'ENHANCED_BASIC');
+const hasDHAManualPlan = plans.some(plan => plan.planType === 'DHA_MANUAL');
   // Premium labels based on plan type
   const getPremiumLabelA = () => {
     if (hasEnhancedPlan) return 'CAT A';
@@ -2553,6 +2552,35 @@ ${plans.some(plan => plan.categoriesData?.mentalHealth) ? `
     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'mentalHealth')}</td>`).join('')}
 </tr>
 ` : ''}
+` : ''}
+
+<!-- DHA MANUAL PLAN FIELDS - Show only if DHA Manual plans exist -->
+${hasDHAManualPlan ? `
+<tr class="section-header">
+    <td colspan="${plans.length + 1}">DHA ENHANCED PLAN DETAILS</td>
+</tr>
+${plans.some(plan => plan.categoriesData?.planName) ? generateMergedRow('Product Name', 'planName', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.accessForOP) ? generateMergedRow('Access for OP', 'accessForOP', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.referralProcedure) ? generateMergedRow('Referral Procedure', 'referralProcedure', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.intensiveCareUnit) ? generateMergedRow('Intensive Care Unit', 'intensiveCareUnit', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.diagnosticTests) ? generateMergedRow('Diagnostic Tests And Procedures', 'diagnosticTests', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.drugsMedicines) ? generateMergedRow('Drugs and Medicines', 'drugsMedicines', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.doctorConsultations) ? generateMergedRow('Doctor, Surgeon & Specialist Consultations', 'doctorConsultations', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.organTransplant) ? generateMergedRow('Organ Transplant', 'organTransplant', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.kidneyDialysis) ? generateMergedRow('Kidney Dialysis', 'kidneyDialysis', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.ipCoinsurance) ? generateMergedRow('IP Co-insurance', 'ipCoinsurance', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.deductibleConsultation) ? generateMergedRow('Deductible (Consultation)', 'deductibleConsultation', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.opCoinsurance) ? generateMergedRow('OP Co-insurance', 'opCoinsurance', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.pharmacyLimit) ? generateMergedRow('Pharmacy Limit', 'pharmacyLimit', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.pharmacyCoinsurance) ? generateMergedRow('Pharmacy Co-insurance', 'pharmacyCoinsurance', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.medicineType) ? generateMergedRow('Medicine Type', 'medicineType', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.prescribedPhysiotherapy) ? generateMergedRow('Physiotherapy Sessions', 'prescribedPhysiotherapy', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.inPatientMaternity) ? generateMergedRow('In-Patient Maternity', 'inPatientMaternity', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.outPatientMaternity) ? generateMergedRow('Out-Patient Maternity', 'outPatientMaternity', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.mentalHealth) ? generateMergedRow('Mental Health / Psychiatric Services', 'mentalHealth', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.routineDental) ? generateMergedRow('Dental Benefits', 'routineDental', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.routineOptical) ? generateMergedRow('Optical Benefits', 'routineOptical', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Repatriation', 'repatriation', plans, highlightedPlanId) : ''}
 ` : ''}
                 <!-- BASIC PLAN FIELDS - Show only if Basic plans exist -->
                 ${hasBasicPlan ? `
@@ -4109,34 +4137,61 @@ if (isCustom) {
       
       // Automatically open DHA Enhanced selector
       setShowDHAEnhancedSelector(true);
-    } else if (newPlanType === 'ENHANCED_CUSTOM') {
-      // Initialize for ENHANCED_CUSTOM - same structure as SME
-      setCurrentPlan({
-        id: null,
-        planType: 'ENHANCED_CUSTOM',
-        providerName: '',
-        selectedCategories: [],
-        categoriesData: {},
-        catAMembers: 0,
-        catAPremium: 0,
-        catBMembers: 0,
-        catBPremium: 0,
-        catCMembers: 0,
-        catCPremium: 0,
-        catDMembers: 0,
-        catDPremium: 0,
-        dubaiMembers: 0,
-        northernEmiratesMembers: 0,
-        policyFee: 0,
-        isRecommended: false,
-        isRenewal: false
-      });
-      
-      setCompanyInfo(prev => ({
-        ...prev,
-        tpa: 'NAS'
-      }));
-    } else if (newPlanType === 'BASIC') {
+    } else if (newPlanType === 'DHA_MANUAL') {
+  // Initialize for DHA_MANUAL - DHA Enhanced with manual entry
+  setCurrentPlan({
+    id: null,
+    planType: 'DHA_MANUAL',
+    providerName: '',
+    selectedCategories: [],
+    categoriesData: {},
+    catAMembers: 0,
+    catAPremium: 0,
+    catBMembers: 0,
+    catBPremium: 0,
+    catCMembers: 0,
+    catCPremium: 0,
+    catDMembers: 0,
+    catDPremium: 0,
+    dubaiMembers: 0,
+    northernEmiratesMembers: 0,
+    policyFee: 0,
+    isRecommended: false,
+    isRenewal: false
+  });
+  
+  setCompanyInfo(prev => ({
+    ...prev,
+    tpa: 'NAS'
+  }));
+} else if (newPlanType === 'ENHANCED_CUSTOM') {
+  // Initialize for ENHANCED_CUSTOM - same structure as SME
+  setCurrentPlan({
+    id: null,
+    planType: 'ENHANCED_CUSTOM',
+    providerName: '',
+    selectedCategories: [],
+    categoriesData: {},
+    catAMembers: 0,
+    catAPremium: 0,
+    catBMembers: 0,
+    catBPremium: 0,
+    catCMembers: 0,
+    catCPremium: 0,
+    catDMembers: 0,
+    catDPremium: 0,
+    dubaiMembers: 0,
+    northernEmiratesMembers: 0,
+    policyFee: 0,
+    isRecommended: false,
+    isRenewal: false
+  });
+  
+  setCompanyInfo(prev => ({
+    ...prev,
+    tpa: 'NAS'
+  }));
+} else if (newPlanType === 'BASIC') {
       setCurrentPlan({
         id: null,
         planType: 'BASIC',
@@ -4756,6 +4811,167 @@ const companyInfoBenefits = [
     return { basicBenefits };
   };
 
+
+const getDHAManualBenefits = () => {
+  // DHA Enhanced Area of Cover Options
+  const DHA_AREA_OF_COVER_OPTIONS = [
+    'UAE (Excluding the Emirate of Abu Dhabi & Al Ain Region). Emergency extension to UAE; Home country (IP only at ISC + SEA excluding China, Japan, HK, Taiwan, Thailand, Singapore)',
+    'UAE + Home Country (IP Only)',
+    'UAE; Home country (IP only at ISC + SEA excluding China, Japan, HK, Taiwan, Thailand, Singapore) Covered for IP subject to UAE R&C selected Network rates and with prior-approval.',
+    'UAE',
+    'Within UAE Only. Emergency extension to Home country (IP only at ISC + SEA excluding China, Japan, HK, Taiwan, Thailand, Singapore) Covered for IP subject to UAE R&C selected Network rates and with prior-approval.',
+    'Dubai',
+    'Other'
+  ];
+
+  // DHA Enhanced Network Options
+  const DHA_NETWORK_OPTIONS = [
+    'Ecare Blue',
+    'Ecare Green',
+    'Ecare Classic',
+    'Ecare-H',
+    'Other'
+  ];
+
+  // DHA Enhanced Access for OP Options
+  const DHA_ACCESS_FOR_OP_OPTIONS = [
+    'Clinics & Medical Centers + Network hospitals with 20% copay on all OP services',
+    'Only Clinics & Medical Centers',
+    'Other'
+  ];
+
+  // DHA Enhanced Referral Procedure Options
+  const DHA_REFERRAL_PROCEDURE_OPTIONS = [
+    'GP referral to SP',
+    'Direct SP access'
+  ];
+
+  // Company Coverage Details - REMOVED planName, RENAMED to Area of Cover with dropdowns
+  const companyInfoBenefits = [
+    { field: 'aggregateLimit', label: 'Annual Limit', options: [...AGGREGATE_LIMIT_OPTIONS, 'Other'], showMainValue: true, hasTextArea: true, canHighlight: false },
+    { field: 'areaOfCover', label: 'Area of Cover', options: DHA_AREA_OF_COVER_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: false },
+    { field: 'network', label: 'Network', options: DHA_NETWORK_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: false },
+    { field: 'accessForOP', label: 'Access for OP', options: DHA_ACCESS_FOR_OP_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: false },
+    { field: 'referralProcedure', label: 'Referral Procedure', options: DHA_REFERRAL_PROCEDURE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: false },
+  ];
+
+// Inpatient Benefits - Dropdown Options
+  const DHA_ORGAN_TRANSPLANT_OPTIONS = [
+    'Covered up to AED 100,000/- with 20% Copay on all OP services',
+    'Other'
+  ];
+
+  const DHA_KIDNEY_DIALYSIS_OPTIONS = [
+    'Covered up to AED 60,000/- with 20% Copay on all OP services',
+    'Other'
+  ];
+
+  const DHA_IP_COINSURANCE_OPTIONS = [
+    'Covered with NIL Co-Pay',
+    'Covered with 20% Co-Pay - Max 500 per encounter & 1000 Annual Agg.',
+    'Covered with 10% copay',
+    'Covered with 20% copay',
+    'Other'
+  ];
+
+  // Inpatient Benefits
+  const inpatientBenefits = [
+    { field: 'intensiveCareUnit', label: 'Intensive Care Unit', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'diagnosticTests', label: 'Diagnostic Tests And Procedures', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'drugsMedicines', label: 'Drugs and Medicines', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'doctorConsultations', label: 'Doctor, Surgeon & Specialist Consultations', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'organTransplant', label: 'Organ Transplant', options: DHA_ORGAN_TRANSPLANT_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'kidneyDialysis', label: 'Kidney Dialysis', options: DHA_KIDNEY_DIALYSIS_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'ipCoinsurance', label: 'IP Co-insurance', options: DHA_IP_COINSURANCE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+  ];
+
+// Outpatient Benefits - Dropdown Options
+  const DHA_DEDUCTIBLE_CONSULTATION_OPTIONS = [
+    'Covered with 20% Co-Pay (Max AED 25)',
+    'Covered with 20% Co-Pay (Max AED 50)',
+    'Covered with 10% copay',
+    'Covered with 20% copay',
+    'Covered with NIL Co-Pay',
+    'Other'
+  ];
+
+  const DHA_OP_COINSURANCE_OPTIONS = [
+    'Covered with NIL Co-Pay',
+    'Covered with 10% copay',
+    'Covered with 20% copay',
+    'Covered with 30% copay',
+    'Other'
+  ];
+
+  const DHA_PHARMACY_LIMIT_OPTIONS = [
+    'Covered up to AED 2,500',
+    'Covered up to AED 5,000',
+    'Covered up to AED 7,500',
+    'Covered up to AED 10,000',
+    'Other'
+  ];
+
+  const DHA_PHARMACY_COPAY_OPTIONS = [
+    'Covered with NIL Co-Pay',
+    'Covered with 10% copay',
+    'Covered with 20% copay',
+    'Covered with 30% copay',
+    'Other'
+  ];
+
+  const DHA_PHYSIOTHERAPY_OPTIONS = [
+    'Covered upto 6 sessions',
+    'Covered upto 8 sessions',
+    'Covered upto 10 sessions',
+    'Other'
+  ];
+
+  // Outpatient Benefits
+  const outpatientBenefits = [
+    { field: 'deductibleConsultation', label: 'Deductible (Consultation)', options: DHA_DEDUCTIBLE_CONSULTATION_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'opCoinsurance', label: 'OP Co-insurance', options: DHA_OP_COINSURANCE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'pharmacyLimit', label: 'Pharmacy Limit', options: DHA_PHARMACY_LIMIT_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'pharmacyCopay', label: 'Pharmacy Co-Pay', options: DHA_PHARMACY_COPAY_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'medicineType', label: 'Medicine Type', options: ['Formulary', 'Branded', 'Other'], showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'prescribedPhysiotherapy', label: 'Physiotherapy Sessions', options: DHA_PHYSIOTHERAPY_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+  ];
+// Other Benefits - Dropdown Options
+  const DHA_INPATIENT_MATERNITY_OPTIONS = [
+    'Covered upto AED 10,000 for Normal Delivery for medically necessary C-section, complications and for medically necessary termination',
+    'Other'
+  ];
+
+  const DHA_OUTPATIENT_MATERNITY_OPTIONS = [
+    'Covered with Nil copay',
+    'Covered with 10% copay',
+    'Other'
+  ];
+
+  const DHA_DENTAL_OPTIONS = [
+    'Covered up to limit of AED 500 with 30% copay',
+    'Other'
+  ];
+
+  const DHA_REPATRIATION_OPTIONS = [
+    'Covered upto AED 5,000',
+    'Covered upto AED 7,500',
+    'Covered upto AED 10,000',
+    'Other'
+  ];
+
+  // Other Benefits
+  const otherBenefits = [
+    { field: 'inPatientMaternity', label: 'In-Patient Maternity', options: DHA_INPATIENT_MATERNITY_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'outPatientMaternity', label: 'Out-Patient Maternity', options: DHA_OUTPATIENT_MATERNITY_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'mentalHealth', label: 'Mental Health / Psychiatric Services', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'routineDental', label: 'Dental Benefits', options: DHA_DENTAL_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+    { field: 'routineOptical', label: 'Optical Benefits', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'repatriation', label: 'Repatriation', options: DHA_REPATRIATION_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
+  ];
+
+  return { companyInfoBenefits, inpatientBenefits, outpatientBenefits, otherBenefits };
+};
+
   // UPDATED ENHANCED BASIC FIELDS DISPLAY
  // UPDATED ENHANCED BASIC FIELDS DISPLAY - Shows only template fields
 // UPDATED ENHANCED BASIC FIELDS DISPLAY - Shows all DHA Enhanced template fields
@@ -4980,9 +5196,11 @@ const showEditableEnhancedBasicFields = () => {
 };
 
   const { companyInfoBenefits, inpatientBenefits, outpatientBenefits, otherBenefits } = 
-    (planType === 'SME' || planType === 'ENHANCED_CUSTOM') ? getSMEBenefits() : { companyInfoBenefits: [], inpatientBenefits: [], outpatientBenefits: [], otherBenefits: [] };
-  
-  const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBenefits: [] };
+  (planType === 'SME' || planType === 'ENHANCED_CUSTOM') ? getSMEBenefits() : 
+  planType === 'DHA_MANUAL' ? getDHAManualBenefits() :
+  { companyInfoBenefits: [], inpatientBenefits: [], outpatientBenefits: [], otherBenefits: [] };
+
+const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBenefits: [] };
 
  return (
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -5015,18 +5233,30 @@ const showEditableEnhancedBasicFields = () => {
   />
   <span className="text-sm font-bold text-indigo-700">DHA(Predefined)</span>
 </label>
-    
-    <label className="flex items-center space-x-2 cursor-pointer">
-      <input
-        type="radio"
-        name="planType"
-        checked={planType === 'ENHANCED_CUSTOM'}
-        onClick={() => handlePlanTypeChange('ENHANCED_CUSTOM')}
-        onChange={() => {}}
-        className="w-4 h-4 text-purple-600 focus:ring-2 focus:ring-purple-500"
-      />
-      <span className="text-sm font-bold text-purple-700">ENHANCED BASIC (Custom)</span>
-    </label>
+
+<label className="flex items-center space-x-2 cursor-pointer">
+  <input
+    type="radio"
+    name="planType"
+    checked={planType === 'DHA_MANUAL'}
+    onClick={() => handlePlanTypeChange('DHA_MANUAL')}
+    onChange={() => {}}
+    className="w-4 h-4 text-teal-600 focus:ring-2 focus:ring-teal-500"
+  />
+  <span className="text-sm font-bold text-teal-700">ENHANCED BASIC (DHA Enhanced)</span>
+</label>
+
+<label className="flex items-center space-x-2 cursor-pointer">
+  <input
+    type="radio"
+    name="planType"
+    checked={planType === 'ENHANCED_CUSTOM'}
+    onClick={() => handlePlanTypeChange('ENHANCED_CUSTOM')}
+    onChange={() => {}}
+    className="w-4 h-4 text-purple-600 focus:ring-2 focus:ring-purple-500"
+  />
+  <span className="text-sm font-bold text-purple-700">ENHANCED BASIC (Custom)</span>
+</label>
     
     <label className="flex items-center space-x-2 cursor-pointer">
       <input
@@ -5092,7 +5322,7 @@ const showEditableEnhancedBasicFields = () => {
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
-               {companyInfo.tpa === 'Other' && (planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
+               {companyInfo.tpa === 'Other' && (planType === 'SME' || planType === 'ENHANCED_CUSTOM' || planType === 'DHA_MANUAL') && (
   <textarea
     value={companyInfo.tpaManual}
     onChange={(e) => handleCompanyInfoChange('tpaManual', e.target.value)}
@@ -5270,9 +5500,134 @@ const showEditableEnhancedBasicFields = () => {
 
           {/* ENHANCED BASIC PLAN - Show editable fields after template selection */}
           {showEditableEnhancedBasicFields()}
+{/* DHA MANUAL PLAN ENTRY */}
+{planType === 'DHA_MANUAL' && (
+  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg border-2 border-purple-200">
+    <h3 className="font-bold text-purple-800 mb-3 text-sm">🏢 PROVIDER DETAILS</h3>
+    
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs font-bold text-gray-700 mb-1">Provider Name *</label>
+        <select
+          value={currentPlan.providerName}
+          onChange={(e) => handleInputChange('providerName', e.target.value)}
+          className="w-full p-2 border-2 border-purple-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500"
+        >
+          <option value="">Select Provider</option>
+          {PROVIDER_OPTIONS.map(provider => (
+            <option key={provider} value={provider}>{provider}</option>
+          ))}
+        </select>
+      </div>
 
-          {/* PROVIDER DETAILS SECTION - Hide provider dropdown for DHA Enhanced, show for others */}
-          {planType !== 'ENHANCED_BASIC' && (
+      <div>
+        <label className="block text-xs font-bold text-gray-700 mb-1">Categories *</label>
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            {CATEGORY_OPTIONS.map(category => (
+              <label key={category} className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={currentPlan.selectedCategories.includes(category)}
+                  onChange={(e) => {
+                    const newCategories = e.target.checked
+                      ? [...currentPlan.selectedCategories, category]
+                      : currentPlan.selectedCategories.filter(c => c !== category);
+                    handleCategoryChange(newCategories);
+                  }}
+                  className="w-4 h-4 text-teal-600 focus:ring-2 focus:ring-teal-500"
+                />
+                <span className="text-xs font-medium text-gray-700">{category}</span>
+              </label>
+            ))}
+          </div>
+          {currentPlan.selectedCategories.length > 0 && (
+            <div className="text-xs text-green-600 font-medium">
+              Selected: {currentPlan.selectedCategories.join(', ')}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Plan Tag */}
+      <div className="mt-3">
+        <label className="block text-xs font-bold text-gray-700 mb-1">
+          Plan Tag (e.g., Renewal, New Business) - Will display as: Provider Name - Tag
+        </label>
+        <input
+          type="text"
+          value={currentPlan.planTag || ''}
+          onChange={(e) => handleInputChange('planTag', e.target.value)}
+          className="w-full p-2 border-2 border-purple-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500"
+          placeholder="e.g., Renewal, New Business, etc."
+        />
+      </div>
+    </div>
+  </div>
+)}
+
+{/* DHA MANUAL PLAN BENEFITS */}
+{planType === 'DHA_MANUAL' && currentPlan.selectedCategories.length > 0 && (
+  <>
+    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border-2 border-indigo-200">
+      <BenefitSectionTable
+        sectionTitle="📋 COMPANY COVERAGE DETAILS"
+        benefits={companyInfoBenefits}
+        categories={currentPlan.selectedCategories}
+        categoriesData={currentPlan.categoriesData}
+        onChange={handleCategoryDataChange}
+        highlightedItems={highlightedItems}
+        onHighlightChange={handleBenefitHighlight}
+        currentPlanId={currentPlan.id || 'draft'}
+        customFields={[]}
+      />
+    </div>
+
+<div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
+      <BenefitSectionTable
+        sectionTitle="🏥 INPATIENT BENEFITS"
+        benefits={inpatientBenefits}
+        categories={currentPlan.selectedCategories}
+        categoriesData={currentPlan.categoriesData}
+        onChange={handleCategoryDataChange}
+        highlightedItems={highlightedItems}
+        onHighlightChange={handleBenefitHighlight}
+        currentPlanId={currentPlan.id || 'draft'}
+        customFields={[]}
+      />
+    </div>
+
+<div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border-2 border-purple-200">
+      <BenefitSectionTable
+        sectionTitle="👨‍⚕️ OUTPATIENT BENEFITS"
+        benefits={outpatientBenefits}
+        categories={currentPlan.selectedCategories}
+        categoriesData={currentPlan.categoriesData}
+        onChange={handleCategoryDataChange}
+        highlightedItems={highlightedItems}
+        onHighlightChange={handleBenefitHighlight}
+        currentPlanId={currentPlan.id || 'draft'}
+        customFields={[]}
+      />
+    </div>
+
+<div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border-2 border-amber-200">
+      <BenefitSectionTable
+        sectionTitle="🏅 OTHER BENEFITS"
+        benefits={otherBenefits}
+        categories={currentPlan.selectedCategories}
+        categoriesData={currentPlan.categoriesData}
+        onChange={handleCategoryDataChange}
+        highlightedItems={highlightedItems}
+        onHighlightChange={handleBenefitHighlight}
+        currentPlanId={currentPlan.id || 'draft'}
+        customFields={[]}
+      />
+    </div>
+  </>
+)}
+         {/* PROVIDER DETAILS SECTION - Hide provider dropdown for DHA Enhanced, show for others */}
+{planType !== 'ENHANCED_BASIC' && planType !== 'DHA_MANUAL' && (
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border-2 border-purple-200">
               <h3 className="font-bold text-purple-800 mb-3 text-sm">🏢 PROVIDER DETAILS</h3>
               
@@ -5505,8 +5860,8 @@ const showEditableEnhancedBasicFields = () => {
                 </>
               )}
 
-              {/* For SME and ENHANCED_CUSTOM - show only selected categories */}
-              {(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
+            {/* For SME, ENHANCED_CUSTOM, and DHA_MANUAL - show only selected categories */}
+{(planType === 'SME' || planType === 'ENHANCED_CUSTOM' || planType === 'DHA_MANUAL') && (
                 <>
                   {/* Cat A - show only if selected */}
                   {currentPlan.selectedCategories?.includes('CAT A') && (
