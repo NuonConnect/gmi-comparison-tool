@@ -2305,10 +2305,10 @@ tr:not(.section-header) td:first-child {
                 <tr class="section-header">
                     <td colspan="${plans.length + 1}">COMPANY INFORMATION</td>
                 </tr>
-                <tr>
-                    <td class="benefit-name">TPA</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${companyInfo.tpa === 'Other' && companyInfo.tpaManual ? companyInfo.tpaManual : companyInfo.tpa}</td>`).join('')}
-                </tr>
+             <tr>
+    <td class="benefit-name">TPA</td>
+    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.tpa || 'Not specified'}</td>`).join('')}
+</tr>
                 ${!hasBasicPlan && !hasEnhancedPlan ? `
                 <tr>
                     <td class="benefit-name">Categories</td>
@@ -2542,13 +2542,18 @@ ${plans.some(p => p.categoriesData?.outPatientMaternity) ? `
                 </tr>
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.repatriation) ? `
-                <tr>
-                    <td class="benefit-name">Repatriation</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'repatriation')}</td>`).join('')}
-                </tr>
-                ` : ''}
-                ` : ''}
-
+<tr>
+    <td class="benefit-name">Repatriation</td>
+    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'repatriation')}</td>`).join('')}
+</tr>
+` : ''}
+${plans.some(plan => plan.categoriesData?.mentalHealth) ? `
+<tr>
+    <td class="benefit-name">Mental Health / Psychiatric Services</td>
+    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'mentalHealth')}</td>`).join('')}
+</tr>
+` : ''}
+` : ''}
                 <!-- BASIC PLAN FIELDS - Show only if Basic plans exist -->
                 ${hasBasicPlan ? `
                 <tr class="section-header">
@@ -2867,7 +2872,9 @@ const handleCopyFromFirst = () => {
       )}
       {showTextArea && (
         <textarea
-          value={categoriesData[benefit.field]?.[`${category}Other`] || categoriesData[benefit.field]?.[category] || ''}
+ value={hasDropdown 
+  ? (categoriesData[benefit.field]?.[`${category}Other`] || '') 
+  : (categoriesData[benefit.field]?.[category] || '')}
           onChange={(e) => {
             if (hasDropdown) {
               onChange(benefit.field, `${category}Other`, e.target.value);
@@ -3778,6 +3785,7 @@ const [currentPlan, setCurrentPlan] = useState({
   id: null,
   planType: 'SME',
   providerName: '',
+  tpa: '',
   selectedCategories: [],
   categoriesData: {},
   catAMembers: 0,
@@ -4199,7 +4207,11 @@ if (isCustom) {
         return;
       }
 
-      let planToAdd = { ...currentPlan, planType };
+     let planToAdd = { 
+  ...currentPlan, 
+  planType,
+  tpa: companyInfo.tpa === 'Other' ? companyInfo.tpaManual : companyInfo.tpa
+};
 
       if (planType === 'BASIC') {
         if (!currentPlan.annualLimit) {
@@ -4687,12 +4699,12 @@ const handleBackToNormal = () => {
   const getSMEBenefits = () => {
   // UPDATED: Added Pre Existing Condition field and Area of Cover
   // For ENHANCED_CUSTOM, area of cover has no dropdown (textarea only)
-  const companyInfoBenefits = [
-    { field: 'areaOfCover', label: 'Area of Cover', options: planType === 'ENHANCED_CUSTOM' ? [] : AREA_OF_COVER_OPTIONS, showMainValue: planType !== 'ENHANCED_CUSTOM', hasTextArea: true, canHighlight: false },
-    { field: 'network', label: 'Network', options: networkOptions, showMainValue: true, hasTextArea: false, canHighlight: false },
-    { field: 'aggregateLimit', label: 'Aggregate Limit', options: AGGREGATE_LIMIT_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: false },
-    { field: 'medicalUnderwriting', label: 'Medical Underwriting', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-  ];
+const companyInfoBenefits = [
+  { field: 'areaOfCover', label: 'Area of Cover', options: planType === 'ENHANCED_CUSTOM' ? [] : AREA_OF_COVER_OPTIONS, showMainValue: planType !== 'ENHANCED_CUSTOM', hasTextArea: true, canHighlight: false },
+  { field: 'network', label: 'Network', options: [...networkOptions, 'Other'], showMainValue: true, hasTextArea: true, canHighlight: false },
+  { field: 'aggregateLimit', label: 'Aggregate Limit', options: [...AGGREGATE_LIMIT_OPTIONS, 'Other'], showMainValue: true, hasTextArea: true, canHighlight: false },
+  { field: 'medicalUnderwriting', label: 'Medical Underwriting', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+];
 
   // UPDATED: Inpatient benefits - moved IP Copay to end, added Organ Transplant and Kidney Dialysis
   const inpatientBenefits = [
@@ -4724,6 +4736,7 @@ const handleBackToNormal = () => {
       { field: 'preventiveServices', label: 'Preventive Services', options: PREVENTIVE_SERVICES_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
       { field: 'alternativeMedicines', label: 'Alternative Medicines', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'repatriation', label: 'Repatriation', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+       { field: 'mentalHealth', label: 'Mental Health / Psychiatric Services', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
    
     ];
 
@@ -4991,17 +5004,17 @@ const showEditableEnhancedBasicFields = () => {
       <span className="text-sm font-bold text-indigo-700">BASIC</span>
     </label>
     
-    <label className="flex items-center space-x-2 cursor-pointer">
-      <input
-        type="radio"
-        name="planType"
-        checked={planType === 'ENHANCED_BASIC'}
-        onClick={() => handlePlanTypeChange('ENHANCED_BASIC')}
-        onChange={() => {}}
-        className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
-      />
-      <span className="text-sm font-bold text-indigo-700">ENHANCED BASIC (DHA Enhanced)</span>
-    </label>
+<label className="flex items-center space-x-2 cursor-pointer">
+  <input
+    type="radio"
+    name="planType"
+    checked={planType === 'ENHANCED_BASIC'}
+    onClick={() => handlePlanTypeChange('ENHANCED_BASIC')}
+    onChange={() => {}}
+    className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+  />
+  <span className="text-sm font-bold text-indigo-700">DHA(Predefined)</span>
+</label>
     
     <label className="flex items-center space-x-2 cursor-pointer">
       <input
@@ -5079,15 +5092,15 @@ const showEditableEnhancedBasicFields = () => {
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
-                {companyInfo.tpa === 'Other' && planType === 'SME' && (
-                  <input
-                    type="text"
-                    value={companyInfo.tpaManual}
-                    onChange={(e) => handleCompanyInfoChange('tpaManual', e.target.value)}
-                    className="w-full p-2 border-2 border-indigo-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 mt-2"
-                    placeholder="Specify TPA..."
-                  />
-                )}
+               {companyInfo.tpa === 'Other' && (planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
+  <textarea
+    value={companyInfo.tpaManual}
+    onChange={(e) => handleCompanyInfoChange('tpaManual', e.target.value)}
+    className="w-full p-2 border-2 border-indigo-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 mt-2"
+    rows="2"
+    placeholder="Specify TPA..."
+  />
+)}
               </div>
             </div>
           </div>
