@@ -2270,7 +2270,7 @@ tr:not(.section-header) td:first-child {
 <body>
    ${showFirstPage ? `
     <div class="page1">
-        <img src="https://i.imgur.com/Qr8D3ML.png" alt="Cover Page">
+        <img src="https://i.imgur.com/gU1isYj.png" alt="Cover Page">
     </div>
     ` : ''}
 
